@@ -45,6 +45,7 @@ export default function PublicoVehiculo() {
   const [notFound, setNotFound] = useState(false)
   const [activePhoto, setActivePhoto] = useState(0)
   const [submitted, setSubmitted] = useState(false)
+  const [waUrl, setWaUrl] = useState<string>('')
 
   useEffect(() => {
     let cancelled = false
@@ -241,12 +242,15 @@ export default function PublicoVehiculo() {
             </div>
             <div className="px-5 py-5">
               {submitted ? (
-                <SuccessMessage vehicle={vehicle} />
+                <SuccessMessage waUrl={waUrl} />
               ) : (
                 <BookingForm
-                  vehicleId={vehicle.id}
+                  vehicle={vehicle}
                   disabled={!available}
-                  onSuccess={() => setSubmitted(true)}
+                  onSuccess={(url) => {
+                    setWaUrl(url)
+                    setSubmitted(true)
+                  }}
                 />
               )}
             </div>
@@ -261,13 +265,13 @@ export default function PublicoVehiculo() {
 // Formulario
 // ------------------------------------------------------------------
 function BookingForm({
-  vehicleId,
+  vehicle,
   disabled,
   onSuccess,
 }: {
-  vehicleId: string
+  vehicle: Vehicle
   disabled: boolean
-  onSuccess: () => void
+  onSuccess: (waUrl: string) => void
 }) {
   const [serverError, setServerError] = useState<string | null>(null)
   const {
@@ -286,13 +290,53 @@ function BookingForm({
       p_document_number: values.document_number,
       p_phone: values.phone,
       p_email: values.email ?? '',
-      p_vehicle_id: vehicleId,
+      p_vehicle_id: vehicle.id,
       p_start_at: startAt,
       p_end_at: endAt,
       p_notes: values.notes ?? '',
     })
     if (error) return setServerError(error.message)
-    onSuccess()
+
+    // Construye mensaje detallado para WhatsApp
+    const days = Math.max(
+      1,
+      Math.round(
+        (new Date(endAt).getTime() - new Date(startAt).getTime()) / 86_400_000
+      )
+    )
+    const estimate = days * Number(vehicle.daily_rate ?? 0)
+    const fmt = (iso: string) => new Date(iso).toLocaleDateString('es-CO')
+    const lines = [
+      '*Solicitud de reserva — Alquileres La 14*',
+      '',
+      `*Vehículo:* ${vehicle.brand} ${vehicle.model}`,
+      `*Placa:* ${vehicle.plate}`,
+      `*Tarifa:* ${COP.format(Number(vehicle.daily_rate ?? 0))}/día`,
+      '',
+      `*Cliente:* ${values.full_name}`,
+      `*Cédula:* ${values.document_number}`,
+      `*Teléfono:* ${values.phone}`,
+      values.email ? `*Correo:* ${values.email}` : '',
+      '',
+      `*Fechas:* ${fmt(values.start_date)} al ${fmt(values.end_date)}`,
+      `*Duración:* ${days} día${days === 1 ? '' : 's'}`,
+      `*Valor estimado:* ${COP.format(estimate)}`,
+      values.notes ? '' : '',
+      values.notes ? `*Observaciones:* ${values.notes}` : '',
+      '',
+      'La solicitud quedó registrada en el sistema. Quedo atento para confirmar disponibilidad y método de pago.',
+    ]
+    const msg = lines.filter((l) => l !== undefined).join('\n')
+    const url = `https://wa.me/${BUSINESS_INFO.whatsapp}?text=${encodeURIComponent(msg)}`
+
+    // Informa al padre (muestra pantalla de éxito con fallback)
+    onSuccess(url)
+
+    // Redirecciona automáticamente a WhatsApp
+    // (breve timeout para que el estado de éxito alcance a renderizarse)
+    setTimeout(() => {
+      window.location.href = url
+    }, 400)
   }
 
   const inputCls =
@@ -390,10 +434,7 @@ function BookingForm({
   )
 }
 
-function SuccessMessage({ vehicle }: { vehicle: Vehicle }) {
-  const text = encodeURIComponent(
-    `Hola, acabo de enviar una solicitud de reserva por el ${vehicle.brand} ${vehicle.model} (placa ${vehicle.plate}).`
-  )
+function SuccessMessage({ waUrl }: { waUrl: string }) {
   return (
     <div className="text-center">
       <div className="mx-auto flex h-12 w-12 items-center justify-center rounded-full bg-emerald-500 text-xl font-bold text-white">
@@ -403,17 +444,18 @@ function SuccessMessage({ vehicle }: { vehicle: Vehicle }) {
         ¡Solicitud enviada!
       </h3>
       <p className="mt-2 text-sm text-gray-600">
-        Te contactaremos por WhatsApp para confirmar disponibilidad, precio
-        final y método de pago.
+        Te estamos llevando a WhatsApp para que envíes el mensaje con los
+        detalles de tu reserva.
       </p>
       <a
-        href={`https://wa.me/${BUSINESS_INFO.whatsapp}?text=${text}`}
-        target="_blank"
-        rel="noopener noreferrer"
+        href={waUrl || `https://wa.me/${BUSINESS_INFO.whatsapp}`}
         className="mt-5 inline-flex items-center justify-center gap-2 rounded-md bg-[#25D366] px-4 py-2.5 text-sm font-semibold text-white hover:bg-[#1DAE52]"
       >
-        Escribirnos ahora
+        Abrir WhatsApp
       </a>
+      <p className="mt-3 text-[11px] text-gray-400">
+        Si no se abrió automáticamente, toca el botón para enviar tu mensaje.
+      </p>
     </div>
   )
 }

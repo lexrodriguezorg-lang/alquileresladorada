@@ -1,0 +1,27 @@
+{
+  "name": "Alquileres La 14",
+  "short_name": "La 14",
+  "description": "Alquiler de motos y carros en La Dorada, Caldas",
+  "start_url": "/publico",
+  "scope": "/",
+  "display": "standalone",
+  "orientation": "portrait",
+  "background_color": "#FFFFFF",
+  "theme_color": "#E8192C",
+  "lang": "es-CO",
+  "icons": [
+    {
+      "src": "/favicon.svg",
+      "sizes": "any",
+      "type": "image/svg+xml",
+      "purpose": "any"
+    },
+    {
+      "src": "/apple-touch-icon.svg",
+      "sizes": "180x180",
+      "type": "image/svg+xml",
+      "purpose": "any maskable"
+    }
+  ],
+  "categories": ["business", "travel", "utilities"]
+}

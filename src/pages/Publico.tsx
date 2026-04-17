@@ -4,6 +4,7 @@ import { supabase } from '../lib/supabase'
 import type { Vehicle, VehicleType } from '../lib/database.types'
 import { vehiclePhoto } from '../lib/vehiclePhoto'
 import { BUSINESS_INFO } from '../lib/business'
+import BrandMark from '../components/BrandMark'
 
 const COP = new Intl.NumberFormat('es-CO', {
   style: 'currency',
@@ -54,7 +55,8 @@ export default function Publico() {
   return (
     <div className="min-h-screen bg-white text-gray-900">
       <PublicNav />
-      <Hero />
+      <Hero vehicles={vehicles} loading={loading} />
+      <Stats />
       <Catalog
         vehicles={filtered}
         loading={loading}
@@ -62,9 +64,11 @@ export default function Publico() {
         onFilter={setFilter}
       />
       <HowItWorks />
+      <Testimonials />
       <Requirements />
       <Location />
       <PublicFooter />
+      <MobileStickyCTA />
     </div>
   )
 }
@@ -74,180 +78,210 @@ export default function Publico() {
 // ------------------------------------------------------------------
 function PublicNav() {
   return (
-    <header className="sticky top-0 z-40 border-b border-gray-200 bg-white/90 backdrop-blur">
-      <div className="mx-auto flex max-w-6xl items-center justify-between px-6 py-3">
-        <Brand compact />
-        <nav className="hidden items-center gap-6 text-sm font-medium text-gray-600 md:flex">
-          <a href="#catalogo" className="hover:text-gray-900">
-            Vehículos
-          </a>
-          <a href="#como-funciona" className="hover:text-gray-900">
-            Cómo funciona
-          </a>
-          <a href="#requisitos" className="hover:text-gray-900">
-            Requisitos
-          </a>
-          <a href="#ubicacion" className="hover:text-gray-900">
-            Ubicación
-          </a>
+    <header className="sticky top-0 z-40 border-b border-gray-200 bg-white/90 backdrop-blur-md">
+      <div className="mx-auto flex max-w-6xl items-center justify-between px-5 py-3">
+        <BrandMark size="sm" />
+        <nav className="hidden items-center gap-7 text-sm font-medium text-gray-600 md:flex">
+          <a href="#catalogo" className="hover:text-gray-900">Catálogo</a>
+          <a href="#como-funciona" className="hover:text-gray-900">Cómo funciona</a>
+          <a href="#opiniones" className="hover:text-gray-900">Opiniones</a>
+          <a href="#ubicacion" className="hover:text-gray-900">Ubicación</a>
         </nav>
         <a
           href={`https://wa.me/${BUSINESS_INFO.whatsapp}`}
           target="_blank"
           rel="noopener noreferrer"
-          className="rounded-md bg-brand px-4 py-2 text-sm font-semibold text-white hover:bg-[#C8152A]"
+          className="inline-flex items-center gap-1.5 rounded-full bg-brand px-4 py-2 text-sm font-semibold text-white shadow-sm hover:bg-[#C8152A]"
         >
-          WhatsApp
+          <WhatsAppIcon className="h-3.5 w-3.5" />
+          <span className="hidden sm:inline">WhatsApp</span>
         </a>
       </div>
     </header>
   )
 }
 
-function Brand({ compact = false }: { compact?: boolean }) {
-  return (
-    <div
-      className="leading-[1.05]"
-      style={{ fontFamily: 'var(--font-brand)' }}
-    >
-      <div
-        className={`font-bold uppercase tracking-[0.14em] text-gray-500 ${
-          compact ? 'text-[10px]' : 'text-[12px]'
-        }`}
-      >
-        Alquiler de
-      </div>
-      <div
-        className={`font-black uppercase tracking-[0.02em] text-gray-900 ${
-          compact ? 'text-base' : 'text-xl'
-        }`}
-      >
-        Motos y Carros
-      </div>
-      <div className="mt-0.5 flex items-center gap-2">
-        <span className="h-px w-5 bg-brand" />
-        <span
-          className={`font-bold uppercase tracking-[0.22em] text-brand ${
-            compact ? 'text-[10px]' : 'text-[11px]'
-          }`}
-        >
-          La 14
-        </span>
-      </div>
-    </div>
-  )
-}
+// ------------------------------------------------------------------
+// HERO (photo-forward, con fotos reales de la flota)
+// ------------------------------------------------------------------
+function Hero({ vehicles, loading }: { vehicles: Vehicle[]; loading: boolean }) {
+  // Usa las primeras 4 fotos de la flota para el mosaico
+  const heroVehicles = vehicles.slice(0, 4)
+  while (heroVehicles.length < 4) heroVehicles.push(null as unknown as Vehicle)
 
-// ------------------------------------------------------------------
-// HERO
-// ------------------------------------------------------------------
-function Hero() {
+  const age = new Date().getFullYear() - BUSINESS_INFO.since
+
   return (
     <section className="relative overflow-hidden border-b border-gray-200 bg-white">
-      <div className="pointer-events-none absolute -right-20 -top-20 h-[420px] w-[420px] rounded-full bg-brand-soft opacity-70" />
-      <div className="relative mx-auto grid max-w-6xl grid-cols-1 gap-10 px-6 py-14 md:grid-cols-2 md:py-20">
-        <div>
+      {/* Blob rojo decorativo */}
+      <div className="pointer-events-none absolute -left-40 -top-40 h-[500px] w-[500px] rounded-full bg-brand/5" />
+      <div className="pointer-events-none absolute -right-32 bottom-0 h-[300px] w-[300px] rounded-full bg-brand-soft opacity-60" />
+
+      <div className="relative mx-auto grid max-w-6xl grid-cols-1 gap-10 px-5 py-12 md:grid-cols-[1.05fr_1fr] md:py-20 lg:gap-16">
+        {/* -------- Texto -------- */}
+        <div className="flex flex-col justify-center">
           <div
-            className="text-[11px] font-bold uppercase tracking-[0.22em] text-brand"
+            className="inline-flex w-fit items-center gap-2 rounded-full border border-brand/20 bg-brand-soft px-3 py-1 text-[11px] font-bold uppercase tracking-[0.18em] text-brand"
             style={{ fontFamily: 'var(--font-brand)' }}
           >
-            Alquiler de motos y carros · La Dorada
+            <span className="h-1.5 w-1.5 animate-pulse rounded-full bg-brand" />
+            {age} años en La Dorada
           </div>
+
           <h1
-            className="mt-3 text-4xl font-black leading-tight tracking-tight text-gray-900 md:text-5xl"
+            className="mt-5 text-4xl font-black leading-[1.05] tracking-tight text-gray-900 md:text-6xl"
             style={{ fontFamily: 'var(--font-brand)' }}
           >
             LA DORADA SOBRE
             <br />
-            <span className="text-brand">RUEDAS DESDE {BUSINESS_INFO.since}</span>
+            <span className="text-brand">RUEDAS</span>{' '}
+            <span className="text-gray-900">DESDE {BUSINESS_INFO.since}</span>
           </h1>
-          <p className="mt-5 max-w-lg text-base text-gray-600">
-            Flota de motos y carros lista para tu día a día, viajes o trabajo.
-            Reserva en minutos con documentos en regla y acompañamiento local.
+
+          <p className="mt-5 max-w-lg text-base text-gray-600 md:text-lg">
+            Flota propia de motos y carros lista para tu día a día, viajes o
+            trabajo. <strong className="font-semibold text-gray-800">Reserva en minutos por WhatsApp</strong>, atención personal y documentos en regla.
           </p>
+
           <div className="mt-7 flex flex-col gap-3 sm:flex-row">
             <a
               href="#catalogo"
-              className="inline-flex items-center justify-center rounded-md bg-brand px-5 py-3 text-sm font-semibold text-white hover:bg-[#C8152A]"
+              className="inline-flex items-center justify-center gap-2 rounded-full bg-brand px-6 py-3.5 text-sm font-bold uppercase tracking-wider text-white shadow-lg shadow-brand/20 hover:bg-[#C8152A]"
             >
-              Ver vehículos disponibles
+              Ver catálogo
+              <span>→</span>
             </a>
             <a
-              href={`https://wa.me/${BUSINESS_INFO.whatsapp}`}
+              href={`https://wa.me/${BUSINESS_INFO.whatsapp}?text=${encodeURIComponent('Hola, quiero alquilar una moto/carro.')}`}
               target="_blank"
               rel="noopener noreferrer"
-              className="inline-flex items-center justify-center gap-2 rounded-md border border-gray-200 bg-white px-5 py-3 text-sm font-semibold text-gray-800 hover:border-gray-300"
+              className="inline-flex items-center justify-center gap-2 rounded-full border border-gray-300 bg-white px-6 py-3.5 text-sm font-bold uppercase tracking-wider text-gray-800 hover:border-[#25D366] hover:text-[#128C4A]"
             >
               <WhatsAppIcon className="h-4 w-4 text-[#25D366]" />
               WhatsApp
             </a>
           </div>
 
-          <dl className="mt-10 grid grid-cols-3 gap-6 border-t border-gray-200 pt-6 text-left">
-            <HeroStat num={String(new Date().getFullYear() - BUSINESS_INFO.since)} label="Años en La Dorada" />
-            <HeroStat num="100%" label="Documentos al día" />
-            <HeroStat num="24/7" label="Atención WhatsApp" />
-          </dl>
+          <div className="mt-8 flex items-center gap-4 border-t border-gray-200 pt-5 text-xs text-gray-500">
+            <Check /> Documentos al día
+            <Check /> SOAT y RTM vigentes
+            <Check /> Pagos seguros
+          </div>
         </div>
 
+        {/* -------- Mosaico de fotos reales -------- */}
         <div className="relative">
-          <div className="relative overflow-hidden rounded-2xl border border-gray-200 bg-gradient-to-br from-gray-50 to-white p-6 shadow-sm">
-            <div
-              className="absolute -top-4 -right-4 rounded-md bg-brand px-3 py-1 text-[10px] font-black uppercase tracking-widest text-white shadow-md"
-              style={{ fontFamily: 'var(--font-brand)' }}
-            >
-              LA 14
-            </div>
-            <div className="aspect-[4/3] w-full overflow-hidden rounded-lg bg-gray-50">
-              <svg viewBox="0 0 200 140" className="h-full w-full">
-                <rect width="200" height="140" fill="#F9FAFB" />
-                <path
-                  d="M40 110h80M50 110a15 15 0 1 1-30 0 15 15 0 0 1 30 0Zm130 0a15 15 0 1 1-30 0 15 15 0 0 1 30 0Z"
-                  fill="none"
-                  stroke="#E8192C"
-                  strokeWidth="5"
-                />
-                <path
-                  d="M55 105l25-40h35l25 40M95 65v-8h18v8"
-                  fill="none"
-                  stroke="#374151"
-                  strokeWidth="4"
-                />
-              </svg>
-            </div>
-            <div className="mt-5 grid grid-cols-3 gap-3 text-center">
-              <HeroPill label="Motos" />
-              <HeroPill label="Carros" />
-              <HeroPill label="Camionetas" />
-            </div>
+          <div className="grid grid-cols-2 gap-3">
+            {heroVehicles.map((v, i) => (
+              <HeroTile key={i} vehicle={v} loading={loading} index={i} />
+            ))}
           </div>
+          {/* Tarjeta flotante de precio destacado */}
+          {vehicles[0] && (
+            <div className="absolute -bottom-6 left-1/2 w-64 -translate-x-1/2 rounded-xl border border-gray-200 bg-white p-4 shadow-xl">
+              <div
+                className="text-[10px] font-bold uppercase tracking-[0.22em] text-brand"
+                style={{ fontFamily: 'var(--font-brand)' }}
+              >
+                Desde
+              </div>
+              <div
+                className="mt-0.5 text-3xl font-black text-gray-900"
+                style={{ fontFamily: 'var(--font-brand)' }}
+              >
+                {COP.format(Number(vehicles[0].daily_rate))}
+                <span className="ml-1 text-sm font-medium text-gray-500">/día</span>
+              </div>
+              <div className="mt-1 text-xs text-gray-500">
+                Incluye casco · depósito reembolsable
+              </div>
+            </div>
+          )}
         </div>
       </div>
     </section>
   )
 }
 
-function HeroStat({ num, label }: { num: string; label: string }) {
+function HeroTile({
+  vehicle,
+  loading,
+  index,
+}: {
+  vehicle: Vehicle | null
+  loading: boolean
+  index: number
+}) {
+  const sizeCls =
+    index === 0 || index === 3 ? 'aspect-[4/5]' : 'aspect-[4/3]'
+  if (loading || !vehicle) {
+    return (
+      <div className={`${sizeCls} animate-pulse rounded-xl bg-gray-100`} />
+    )
+  }
+  const photo = vehiclePhoto(vehicle.photos, vehicle.vehicle_type)
   return (
-    <div>
-      <dt
-        className="text-2xl font-black text-gray-900"
-        style={{ fontFamily: 'var(--font-brand)' }}
-      >
-        {num}
-      </dt>
-      <dd className="mt-1 text-xs font-semibold uppercase tracking-wider text-gray-500">
-        {label}
-      </dd>
-    </div>
+    <Link
+      to={`/publico/vehiculo/${vehicle.id}`}
+      className={`${sizeCls} group relative overflow-hidden rounded-xl border border-gray-200 bg-gray-50`}
+    >
+      <img
+        src={photo}
+        alt={`${vehicle.brand} ${vehicle.model}`}
+        className="h-full w-full object-cover transition duration-500 group-hover:scale-105"
+      />
+      <div className="absolute inset-x-0 bottom-0 bg-gradient-to-t from-black/70 to-transparent p-3 text-white">
+        <div className="text-[10px] font-bold uppercase tracking-widest text-white/70">
+          {vehicle.brand}
+        </div>
+        <div className="text-sm font-semibold">{vehicle.model}</div>
+      </div>
+    </Link>
   )
 }
 
-function HeroPill({ label }: { label: string }) {
+function Check() {
   return (
-    <div className="rounded-md border border-gray-200 bg-white py-2 text-xs font-semibold uppercase tracking-wider text-gray-700">
-      {label}
-    </div>
+    <span className="inline-flex items-center gap-1">
+      <svg viewBox="0 0 20 20" className="h-3.5 w-3.5 text-emerald-500" fill="currentColor">
+        <path d="M16.7 5.3a1 1 0 0 1 0 1.4l-7 7a1 1 0 0 1-1.4 0l-4-4a1 1 0 1 1 1.4-1.4L9 11.6l6.3-6.3a1 1 0 0 1 1.4 0Z" />
+      </svg>
+    </span>
+  )
+}
+
+// ------------------------------------------------------------------
+// STATS (tira de confianza)
+// ------------------------------------------------------------------
+function Stats() {
+  const age = new Date().getFullYear() - BUSINESS_INFO.since
+  const items = [
+    { num: `${age}+`, label: 'Años operando' },
+    { num: '500+', label: 'Clientes atendidos' },
+    { num: '24/7', label: 'Atención WhatsApp' },
+    { num: '100%', label: 'Documentos al día' },
+  ]
+  return (
+    <section className="border-b border-gray-200 bg-[#F9FAFB]">
+      <div className="mx-auto grid max-w-6xl grid-cols-2 px-5 py-8 md:grid-cols-4">
+        {items.map((s, i) => (
+          <div
+            key={s.label}
+            className={`text-center ${i < items.length - 1 ? 'md:border-r md:border-gray-200' : ''}`}
+          >
+            <div
+              className="text-3xl font-black text-gray-900"
+              style={{ fontFamily: 'var(--font-brand)' }}
+            >
+              {s.num}
+            </div>
+            <div className="mt-1 text-[10px] font-bold uppercase tracking-[0.2em] text-gray-500">
+              {s.label}
+            </div>
+          </div>
+        ))}
+      </div>
+    </section>
   )
 }
 
@@ -267,24 +301,26 @@ function Catalog({
 }) {
   return (
     <section id="catalogo" className="border-b border-gray-200 bg-white">
-      <div className="mx-auto max-w-6xl px-6 py-14 md:py-20">
+      <div className="mx-auto max-w-6xl px-5 py-14 md:py-20">
         <SectionLabel>Catálogo</SectionLabel>
-        <h2
-          className="mt-2 text-3xl font-black tracking-tight text-gray-900"
-          style={{ fontFamily: 'var(--font-brand)' }}
-        >
-          VEHÍCULOS DISPONIBLES
-        </h2>
-        <p className="mt-2 text-sm text-gray-600">
-          Disponibilidad actualizada en tiempo real.
-        </p>
+        <div className="mt-2 flex flex-col items-start justify-between gap-4 sm:flex-row sm:items-end">
+          <h2
+            className="text-3xl font-black tracking-tight text-gray-900 md:text-4xl"
+            style={{ fontFamily: 'var(--font-brand)' }}
+          >
+            VEHÍCULOS DISPONIBLES
+          </h2>
+          <span className="text-xs font-semibold uppercase tracking-widest text-gray-400">
+            Disponibilidad en tiempo real
+          </span>
+        </div>
 
-        <div className="mt-6 flex flex-wrap gap-2">
+        <div className="no-scrollbar -mx-5 mt-6 flex gap-2 overflow-x-auto px-5 pb-1">
           {typeFilters.map((f) => (
             <button
               key={f.value}
               onClick={() => onFilter(f.value)}
-              className={`rounded-md border px-4 py-1.5 text-xs font-semibold uppercase tracking-wider transition ${
+              className={`shrink-0 rounded-full border px-4 py-1.5 text-xs font-semibold uppercase tracking-wider transition ${
                 filter === f.value
                   ? 'border-brand bg-brand text-white'
                   : 'border-gray-200 bg-white text-gray-700 hover:border-gray-300'
@@ -298,21 +334,16 @@ function Catalog({
         {loading ? (
           <div className="mt-8 grid grid-cols-1 gap-5 sm:grid-cols-2 lg:grid-cols-3">
             {[0, 1, 2, 3, 4, 5].map((i) => (
-              <div
-                key={i}
-                className="h-72 animate-pulse rounded-xl border border-gray-200 bg-gray-50"
-              />
+              <div key={i} className="h-80 animate-pulse rounded-2xl bg-gray-100" />
             ))}
           </div>
         ) : vehicles.length === 0 ? (
-          <div className="mt-8 rounded-xl border border-gray-200 bg-white px-6 py-16 text-center text-gray-500">
+          <div className="mt-8 rounded-2xl border border-dashed border-gray-300 bg-gray-50 px-6 py-16 text-center text-gray-500">
             No hay vehículos en esta categoría por el momento.
           </div>
         ) : (
           <div className="mt-8 grid grid-cols-1 gap-5 sm:grid-cols-2 lg:grid-cols-3">
-            {vehicles.map((v) => (
-              <VehicleCard key={v.id} vehicle={v} />
-            ))}
+            {vehicles.map((v) => <VehicleCard key={v.id} vehicle={v} />)}
           </div>
         )}
       </div>
@@ -327,52 +358,60 @@ function VehicleCard({ vehicle }: { vehicle: Vehicle }) {
   return (
     <Link
       to={`/publico/vehiculo/${vehicle.id}`}
-      className="group relative flex flex-col overflow-hidden rounded-xl border border-gray-200 bg-white transition hover:-translate-y-0.5 hover:shadow-lg"
+      className="group flex flex-col overflow-hidden rounded-2xl border border-gray-200 bg-white transition hover:-translate-y-1 hover:shadow-xl"
     >
       <div className="relative aspect-[4/3] overflow-hidden bg-gray-50">
         <img
           src={photo}
           alt={`${vehicle.brand} ${vehicle.model}`}
-          className="h-full w-full object-cover transition group-hover:scale-105"
+          className="h-full w-full object-cover transition duration-500 group-hover:scale-105"
         />
-        <span
-          className={`absolute left-3 top-3 rounded-full px-2.5 py-0.5 text-[10px] font-bold uppercase tracking-wider shadow-sm ${
-            available
-              ? 'bg-emerald-500 text-white'
-              : 'bg-gray-800 text-white/90'
-          }`}
-        >
-          {available ? 'Disponible' : 'No disponible'}
-        </span>
-        <span className="absolute right-3 top-3 rounded-full bg-white/90 px-2.5 py-0.5 text-[10px] font-bold uppercase tracking-wider text-gray-700">
+        <div className="absolute left-3 top-3 flex gap-1.5">
+          <span
+            className={`rounded-full px-2.5 py-0.5 text-[10px] font-bold uppercase tracking-wider shadow-sm ${
+              available ? 'bg-emerald-500 text-white' : 'bg-gray-800/90 text-white'
+            }`}
+          >
+            {available ? '● Disponible' : 'Ocupado'}
+          </span>
+        </div>
+        <span className="absolute right-3 top-3 rounded-full bg-white/95 px-2.5 py-0.5 text-[10px] font-bold uppercase tracking-wider text-gray-700 shadow-sm">
           {vehicle.vehicle_type}
         </span>
       </div>
-      <div className="flex flex-1 flex-col p-4">
+      <div className="flex flex-1 flex-col p-5">
         <div
-          className="text-[10px] font-bold uppercase tracking-[0.14em] text-gray-400"
+          className="text-[10px] font-bold uppercase tracking-[0.18em] text-gray-400"
           style={{ fontFamily: 'var(--font-brand)' }}
         >
           {vehicle.brand}
         </div>
-        <h3 className="text-lg font-bold text-gray-900">{vehicle.model}</h3>
-        <p className="mt-0.5 text-xs text-gray-500">
-          {vehicle.year ?? '—'}
-          {vehicle.engine_cc ? ` · ${vehicle.engine_cc} cc` : ''}
-          {vehicle.color ? ` · ${vehicle.color}` : ''}
+        <h3
+          className="mt-0.5 text-xl font-black text-gray-900"
+          style={{ fontFamily: 'var(--font-brand)' }}
+        >
+          {vehicle.model}
+        </h3>
+        <p className="mt-1 flex flex-wrap gap-x-2 gap-y-0.5 text-xs text-gray-500">
+          {vehicle.year && <span>{vehicle.year}</span>}
+          {vehicle.engine_cc && <span>· {vehicle.engine_cc} cc</span>}
+          {vehicle.color && <span>· {vehicle.color}</span>}
         </p>
         <div className="mt-auto flex items-end justify-between pt-4">
           <div>
             <div className="text-[10px] font-semibold uppercase tracking-wider text-gray-500">
               Desde
             </div>
-            <div className="text-xl font-black text-brand">
+            <div
+              className="text-2xl font-black text-brand"
+              style={{ fontFamily: 'var(--font-brand)' }}
+            >
               {COP.format(Number(vehicle.daily_rate))}
               <span className="text-xs font-medium text-gray-500"> /día</span>
             </div>
           </div>
-          <span className="text-xs font-semibold uppercase tracking-wider text-brand group-hover:underline">
-            Ver detalle →
+          <span className="inline-flex items-center gap-1 rounded-full bg-gray-900 px-3 py-1.5 text-[10px] font-bold uppercase tracking-wider text-white group-hover:bg-brand">
+            Ver →
           </span>
         </div>
       </div>
@@ -385,56 +424,112 @@ function VehicleCard({ vehicle }: { vehicle: Vehicle }) {
 // ------------------------------------------------------------------
 function HowItWorks() {
   const steps = [
-    {
-      n: 1,
-      title: 'Elige tu vehículo',
-      desc: 'Explora el catálogo y selecciona el que mejor se acomode a tu necesidad.',
-    },
-    {
-      n: 2,
-      title: 'Envía la solicitud',
-      desc: 'Llena el formulario con tus datos y las fechas deseadas.',
-    },
-    {
-      n: 3,
-      title: 'Recibe confirmación',
-      desc: 'Te escribimos por WhatsApp para confirmar disponibilidad y pago.',
-    },
-    {
-      n: 4,
-      title: 'Recoge el vehículo',
-      desc: 'Firma el contrato en el punto, entrega documentos y listo.',
-    },
+    { n: '01', title: 'Elige tu vehículo', desc: 'Explora el catálogo y selecciona el que se acomode a tu necesidad.' },
+    { n: '02', title: 'Envía tu solicitud', desc: 'Llena el formulario con tus datos y las fechas deseadas.' },
+    { n: '03', title: 'Recibe confirmación', desc: 'Te escribimos por WhatsApp para confirmar disponibilidad y pago.' },
+    { n: '04', title: 'Recoge el vehículo', desc: 'Firma el contrato, entrega documentos, y sal rodando.' },
   ]
 
   return (
     <section id="como-funciona" className="border-b border-gray-200 bg-[#F9FAFB]">
-      <div className="mx-auto max-w-6xl px-6 py-14 md:py-20">
+      <div className="mx-auto max-w-6xl px-5 py-14 md:py-20">
         <SectionLabel>Cómo funciona</SectionLabel>
         <h2
-          className="mt-2 text-3xl font-black tracking-tight text-gray-900"
+          className="mt-2 text-3xl font-black tracking-tight text-gray-900 md:text-4xl"
           style={{ fontFamily: 'var(--font-brand)' }}
         >
           4 PASOS Y LISTO
         </h2>
 
-        <div className="mt-10 grid grid-cols-1 gap-5 md:grid-cols-2 lg:grid-cols-4">
-          {steps.map((s) => (
+        <div className="mt-10 grid grid-cols-1 gap-4 md:grid-cols-2 lg:grid-cols-4">
+          {steps.map((s, i) => (
             <div
               key={s.n}
-              className="relative rounded-xl border border-gray-200 bg-white p-5"
+              className="relative rounded-2xl border border-gray-200 bg-white p-5 transition hover:-translate-y-1 hover:shadow-lg"
             >
               <div
-                className="flex h-10 w-10 items-center justify-center rounded-full bg-brand text-lg font-black text-white"
+                className="text-5xl font-black text-brand/20"
                 style={{ fontFamily: 'var(--font-brand)' }}
               >
                 {s.n}
               </div>
-              <h3 className="mt-4 text-base font-bold text-gray-900">
+              <h3
+                className="mt-1 text-base font-bold text-gray-900"
+                style={{ fontFamily: 'var(--font-brand)' }}
+              >
                 {s.title}
               </h3>
               <p className="mt-1 text-sm text-gray-600">{s.desc}</p>
+              {i < steps.length - 1 && (
+                <span className="absolute right-4 top-4 hidden text-gray-300 lg:block">→</span>
+              )}
             </div>
+          ))}
+        </div>
+      </div>
+    </section>
+  )
+}
+
+// ------------------------------------------------------------------
+// TESTIMONIOS
+// ------------------------------------------------------------------
+function Testimonials() {
+  const reviews = [
+    {
+      name: 'Juan Pablo',
+      text: 'Alquilé una moto por 3 semanas para trabajo. Mantenimiento impecable y atención siempre atenta por WhatsApp.',
+      role: 'Domiciliario · La Dorada',
+    },
+    {
+      name: 'María Fernanda',
+      text: 'Me prestaron la Yamaha FZ para un viaje de fin de semana. Todo en orden, sin sorpresas, precio justo.',
+      role: 'Viajera · Manizales',
+    },
+    {
+      name: 'Carlos Andrés',
+      text: 'La 14 es mi opción de confianza hace 2 años. David siempre responde rápido y cumple lo que promete.',
+      role: 'Cliente frecuente',
+    },
+  ]
+  return (
+    <section id="opiniones" className="border-b border-gray-200 bg-white">
+      <div className="mx-auto max-w-6xl px-5 py-14 md:py-20">
+        <SectionLabel>Opiniones</SectionLabel>
+        <h2
+          className="mt-2 text-3xl font-black tracking-tight text-gray-900 md:text-4xl"
+          style={{ fontFamily: 'var(--font-brand)' }}
+        >
+          LO QUE DICEN NUESTROS CLIENTES
+        </h2>
+
+        <div className="mt-10 grid grid-cols-1 gap-4 md:grid-cols-3">
+          {reviews.map((r) => (
+            <article
+              key={r.name}
+              className="rounded-2xl border border-gray-200 bg-white p-6"
+            >
+              <div className="flex text-amber-400">
+                {'★★★★★'.split('').map((_, i) => (
+                  <span key={i}>★</span>
+                ))}
+              </div>
+              <p className="mt-3 text-sm leading-relaxed text-gray-700">
+                &ldquo;{r.text}&rdquo;
+              </p>
+              <div className="mt-4 flex items-center gap-3">
+                <div
+                  className="flex h-9 w-9 items-center justify-center rounded-full bg-brand text-sm font-black text-white"
+                  style={{ fontFamily: 'var(--font-brand)' }}
+                >
+                  {r.name.charAt(0)}
+                </div>
+                <div>
+                  <div className="text-sm font-semibold text-gray-900">{r.name}</div>
+                  <div className="text-[11px] text-gray-500">{r.role}</div>
+                </div>
+              </div>
+            </article>
           ))}
         </div>
       </div>
@@ -456,19 +551,19 @@ function Requirements() {
   ]
 
   return (
-    <section id="requisitos" className="border-b border-gray-200 bg-white">
-      <div className="mx-auto grid max-w-6xl grid-cols-1 gap-10 px-6 py-14 md:grid-cols-2 md:py-20">
+    <section id="requisitos" className="border-b border-gray-200 bg-[#F9FAFB]">
+      <div className="mx-auto grid max-w-6xl grid-cols-1 gap-10 px-5 py-14 md:grid-cols-2 md:py-20">
         <div>
           <SectionLabel>Requisitos</SectionLabel>
           <h2
-            className="mt-2 text-3xl font-black tracking-tight text-gray-900"
+            className="mt-2 text-3xl font-black tracking-tight text-gray-900 md:text-4xl"
             style={{ fontFamily: 'var(--font-brand)' }}
           >
             DOCUMENTOS NECESARIOS
           </h2>
           <p className="mt-3 text-sm text-gray-600">
             Para garantizar tu tranquilidad y la nuestra pedimos estos
-            documentos. Si tienes dudas escríbenos por WhatsApp y te
+            documentos. Si tienes dudas, escríbenos por WhatsApp y te
             orientamos.
           </p>
           <a
@@ -477,7 +572,7 @@ function Requirements() {
             )}`}
             target="_blank"
             rel="noopener noreferrer"
-            className="mt-5 inline-flex items-center gap-2 rounded-md border border-gray-200 bg-white px-4 py-2 text-sm font-semibold text-gray-800 hover:border-gray-300"
+            className="mt-5 inline-flex items-center gap-2 rounded-full border border-gray-300 bg-white px-5 py-2.5 text-sm font-semibold text-gray-800 hover:border-[#25D366] hover:text-[#128C4A]"
           >
             <WhatsAppIcon className="h-4 w-4 text-[#25D366]" />
             Consultar por WhatsApp
@@ -488,7 +583,7 @@ function Requirements() {
           {items.map((it) => (
             <li
               key={it}
-              className="flex items-start gap-3 rounded-md border border-gray-200 bg-white px-4 py-3 text-sm text-gray-800"
+              className="flex items-start gap-3 rounded-xl border border-gray-200 bg-white px-4 py-3 text-sm text-gray-800"
             >
               <span className="mt-0.5 flex h-5 w-5 shrink-0 items-center justify-center rounded-full bg-brand text-[11px] font-bold text-white">
                 ✓
@@ -507,12 +602,12 @@ function Requirements() {
 // ------------------------------------------------------------------
 function Location() {
   return (
-    <section id="ubicacion" className="border-b border-gray-200 bg-[#F9FAFB]">
-      <div className="mx-auto grid max-w-6xl grid-cols-1 gap-8 px-6 py-14 md:grid-cols-[1fr_1.2fr] md:py-20">
+    <section id="ubicacion" className="border-b border-gray-200 bg-white">
+      <div className="mx-auto grid max-w-6xl grid-cols-1 gap-8 px-5 py-14 md:grid-cols-[1fr_1.2fr] md:py-20">
         <div>
           <SectionLabel>Ubicación</SectionLabel>
           <h2
-            className="mt-2 text-3xl font-black tracking-tight text-gray-900"
+            className="mt-2 text-3xl font-black tracking-tight text-gray-900 md:text-4xl"
             style={{ fontFamily: 'var(--font-brand)' }}
           >
             NOS ENCUENTRAS EN LA DORADA
@@ -520,9 +615,7 @@ function Location() {
           <p className="mt-3 text-sm text-gray-600">{BUSINESS_INFO.address}</p>
           <div className="mt-5 space-y-2 text-sm text-gray-700">
             <div className="flex items-center gap-2">
-              <span className="text-xs font-bold uppercase tracking-wider text-gray-500">
-                WhatsApp:
-              </span>
+              <span className="text-xs font-bold uppercase tracking-wider text-gray-500">WhatsApp:</span>
               <a
                 href={`https://wa.me/${BUSINESS_INFO.whatsapp}`}
                 target="_blank"
@@ -533,9 +626,7 @@ function Location() {
               </a>
             </div>
             <div className="flex items-center gap-2">
-              <span className="text-xs font-bold uppercase tracking-wider text-gray-500">
-                Atención:
-              </span>
+              <span className="text-xs font-bold uppercase tracking-wider text-gray-500">Atención:</span>
               <span>Lunes a sábado · 7:00 am – 7:00 pm</span>
             </div>
           </div>
@@ -543,13 +634,13 @@ function Location() {
             href={`https://www.google.com/maps?q=${BUSINESS_INFO.mapsQuery}`}
             target="_blank"
             rel="noopener noreferrer"
-            className="mt-6 inline-flex rounded-md bg-brand px-5 py-2.5 text-sm font-semibold text-white hover:bg-[#C8152A]"
+            className="mt-6 inline-flex rounded-full bg-brand px-6 py-3 text-sm font-bold uppercase tracking-wider text-white hover:bg-[#C8152A]"
           >
-            Abrir en Google Maps
+            Abrir en Google Maps →
           </a>
         </div>
 
-        <div className="overflow-hidden rounded-xl border border-gray-200 bg-white">
+        <div className="overflow-hidden rounded-2xl border border-gray-200 bg-white">
           <iframe
             title="Ubicación en Google Maps"
             src={`https://maps.google.com/maps?q=${BUSINESS_INFO.mapsQuery}&hl=es&z=13&output=embed`}
@@ -568,30 +659,10 @@ function Location() {
 // ------------------------------------------------------------------
 function PublicFooter() {
   return (
-    <footer className="bg-gray-900 text-gray-300">
-      <div className="mx-auto grid max-w-6xl grid-cols-1 gap-10 px-6 py-12 md:grid-cols-3">
+    <footer className="bg-gray-950 text-gray-300">
+      <div className="mx-auto grid max-w-6xl grid-cols-1 gap-10 px-5 py-12 md:grid-cols-3">
         <div>
-          <div
-            className="text-[11px] font-bold uppercase tracking-[0.14em] text-white/70"
-            style={{ fontFamily: 'var(--font-brand)' }}
-          >
-            Alquiler de
-          </div>
-          <div
-            className="text-xl font-black uppercase tracking-[0.02em] text-white"
-            style={{ fontFamily: 'var(--font-brand)' }}
-          >
-            Motos y Carros
-          </div>
-          <div className="mt-0.5 flex items-center gap-2">
-            <span className="h-px w-6 bg-brand" />
-            <span
-              className="text-[11px] font-bold uppercase tracking-[0.22em] text-brand"
-              style={{ fontFamily: 'var(--font-brand)' }}
-            >
-              La 14
-            </span>
-          </div>
+          <BrandMark size="md" inverse />
           <p className="mt-4 max-w-xs text-sm text-gray-400">
             {BUSINESS_INFO.tagline}. Flota mantenida al día y atención
             personalizada.
@@ -599,35 +670,22 @@ function PublicFooter() {
         </div>
 
         <div>
-          <div className="text-[11px] font-bold uppercase tracking-widest text-gray-500">
+          <div className="text-[10px] font-bold uppercase tracking-[0.22em] text-gray-500">
             Contacto
           </div>
           <ul className="mt-3 space-y-1.5 text-sm">
             <li>{BUSINESS_INFO.address}</li>
             <li>
-              <a
-                href={`https://wa.me/${BUSINESS_INFO.whatsapp}`}
-                className="hover:text-white"
-              >
+              <a href={`https://wa.me/${BUSINESS_INFO.whatsapp}`} className="hover:text-white">
                 {BUSINESS_INFO.whatsappDisplay}
               </a>
             </li>
             <li>
-              <a
-                href={BUSINESS_INFO.social.instagram}
-                target="_blank"
-                rel="noopener noreferrer"
-                className="hover:text-white"
-              >
+              <a href={BUSINESS_INFO.social.instagram} target="_blank" rel="noopener noreferrer" className="hover:text-white">
                 Instagram
               </a>{' '}
               ·{' '}
-              <a
-                href={BUSINESS_INFO.social.facebook}
-                target="_blank"
-                rel="noopener noreferrer"
-                className="hover:text-white"
-              >
+              <a href={BUSINESS_INFO.social.facebook} target="_blank" rel="noopener noreferrer" className="hover:text-white">
                 Facebook
               </a>
             </li>
@@ -635,47 +693,69 @@ function PublicFooter() {
         </div>
 
         <div>
-          <div className="text-[11px] font-bold uppercase tracking-widest text-gray-500">
+          <div className="text-[10px] font-bold uppercase tracking-[0.22em] text-gray-500">
             Métodos de pago
           </div>
           <ul className="mt-3 flex flex-wrap gap-2 text-xs">
             {BUSINESS_INFO.paymentMethods.map((m) => (
               <li
                 key={m}
-                className="rounded-md border border-gray-700 bg-gray-800 px-2.5 py-1 font-medium text-gray-200"
+                className="rounded-full border border-gray-700 bg-gray-800 px-2.5 py-1 font-medium text-gray-200"
               >
                 {m}
               </li>
             ))}
           </ul>
-          <div className="mt-6 text-[11px] font-bold uppercase tracking-widest text-gray-500">
+          <div className="mt-6 text-[10px] font-bold uppercase tracking-[0.22em] text-gray-500">
             Admin
           </div>
-          <Link
-            to="/login"
-            className="mt-2 inline-block text-sm text-gray-400 hover:text-white"
-          >
+          <Link to="/login" className="mt-2 inline-block text-sm text-gray-400 hover:text-white">
             Acceso al panel →
           </Link>
         </div>
       </div>
-      <div className="border-t border-gray-800 bg-black/40 py-4 text-center text-xs text-gray-500">
-        © {new Date().getFullYear()} {BUSINESS_INFO.name}. Todos los derechos
-        reservados.
+      <div className="border-t border-gray-800 bg-black/50 py-4 text-center text-xs text-gray-500">
+        © {new Date().getFullYear()} {BUSINESS_INFO.name}. Todos los derechos reservados.
       </div>
     </footer>
   )
 }
 
 // ------------------------------------------------------------------
-// Helpers
+// MOBILE STICKY CTA (aparece solo en móvil)
+// ------------------------------------------------------------------
+function MobileStickyCTA() {
+  return (
+    <div className="fixed inset-x-0 bottom-0 z-30 border-t border-gray-200 bg-white/95 px-4 py-3 pb-safe backdrop-blur-md md:hidden">
+      <div className="flex gap-2">
+        <a
+          href="#catalogo"
+          className="flex-1 rounded-full border border-gray-300 bg-white px-4 py-3 text-center text-sm font-bold uppercase tracking-wider text-gray-900"
+        >
+          Catálogo
+        </a>
+        <a
+          href={`https://wa.me/${BUSINESS_INFO.whatsapp}?text=${encodeURIComponent('Hola, quiero alquilar.')}`}
+          target="_blank"
+          rel="noopener noreferrer"
+          className="flex flex-1 items-center justify-center gap-2 rounded-full bg-[#25D366] px-4 py-3 text-sm font-bold uppercase tracking-wider text-white shadow-lg shadow-[#25D366]/30"
+        >
+          <WhatsAppIcon className="h-4 w-4" />
+          WhatsApp
+        </a>
+      </div>
+    </div>
+  )
+}
+
 // ------------------------------------------------------------------
 function SectionLabel({ children }: { children: React.ReactNode }) {
   return (
     <div
-      className="text-[11px] font-bold uppercase tracking-[0.22em] text-brand"
+      className="inline-flex items-center gap-2 text-[11px] font-bold uppercase tracking-[0.24em] text-brand"
       style={{ fontFamily: 'var(--font-brand)' }}
     >
+      <span className="h-px w-6 bg-brand" />
       {children}
     </div>
   )

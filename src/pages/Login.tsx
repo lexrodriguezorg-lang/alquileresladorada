@@ -4,6 +4,7 @@ import { zodResolver } from '@hookform/resolvers/zod'
 import { z } from 'zod'
 import { Navigate, useLocation } from 'react-router-dom'
 import { useAuth } from '../hooks/useAuth'
+import BrandMark from '../components/BrandMark'
 
 const loginSchema = z.object({
   email: z.string().email('Correo inválido'),
@@ -52,11 +53,9 @@ export default function Login() {
   return (
     <div className="flex min-h-screen items-center justify-center bg-white px-4 text-gray-900">
       <div className="w-full max-w-md rounded-2xl border border-gray-200 bg-white p-8 shadow-[0_8px_40px_rgba(17,24,39,0.06)]">
-        <div className="mb-8 text-center">
-          <div className="mx-auto mb-3 inline-flex rounded-lg bg-brand px-3 py-2 text-lg font-bold tracking-tight text-white">
-            Alquileres La Dorada
-          </div>
-          <p className="text-sm text-gray-500">
+        <div className="mb-8 flex flex-col items-center text-center">
+          <BrandMark size="lg" variant="stacked" />
+          <p className="mt-4 text-sm text-gray-500">
             {mode === 'signin' ? 'Inicia sesión para continuar' : 'Crea una cuenta de acceso'}
           </p>
         </div>

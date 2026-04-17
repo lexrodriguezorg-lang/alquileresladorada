@@ -26,3 +26,44 @@ body,
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
 }
+
+/* Safe-area para notch de iPhone / gesture bar Android */
+html {
+  padding-top: env(safe-area-inset-top);
+  padding-bottom: 0;
+  padding-left: env(safe-area-inset-left);
+  padding-right: env(safe-area-inset-right);
+}
+
+/* App-feel: bloquear selección en botones/UI, permitir en textos/inputs */
+button,
+a[role='button'],
+nav {
+  -webkit-tap-highlight-color: transparent;
+  -webkit-user-select: none;
+  user-select: none;
+}
+
+/* Feedback táctil tipo app: al tocar, el botón se comprime levemente */
+button:active:not(:disabled),
+a:active {
+  transform: scale(0.97);
+  transition: transform 60ms ease-out;
+}
+
+/* Ocultar scrollbar pero mantener scroll (para filtros horizontales) */
+.no-scrollbar::-webkit-scrollbar {
+  display: none;
+}
+.no-scrollbar {
+  -ms-overflow-style: none;
+  scrollbar-width: none;
+}
+
+/* Helpers de safe area para componentes */
+.pb-safe {
+  padding-bottom: calc(env(safe-area-inset-bottom) + 0.5rem);
+}
+.pt-safe {
+  padding-top: env(safe-area-inset-top);
+}

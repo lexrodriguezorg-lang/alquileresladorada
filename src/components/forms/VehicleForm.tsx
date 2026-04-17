@@ -2,7 +2,7 @@ import { useForm } from 'react-hook-form'
 import { zodResolver } from '@hookform/resolvers/zod'
 import { useState } from 'react'
 import { supabase } from '../../lib/supabase'
-import { vehicleSchema, type VehicleInput } from '../../lib/schemas'
+import { vehicleSchema, cleanVehicle, type VehicleInput } from '../../lib/schemas'
 import FormField, { inputCls, btnPrimary, btnSecondary } from '../FormField'
 
 interface Props {
@@ -26,7 +26,7 @@ export default function VehicleForm({ onSuccess, onCancel }: Props) {
 
   const onSubmit = async (values: VehicleInput) => {
     setServerError(null)
-    const { error } = await supabase.from('vehicles').insert(values)
+    const { error } = await supabase.from('vehicles').insert(cleanVehicle(values))
     if (error) return setServerError(error.message)
     onSuccess()
   }

@@ -156,9 +156,10 @@ export interface Alert {
 }
 
 // ---------- Tipos de inserción/actualización ----------
-export type Insert<T> = Omit<T, 'id' | 'created_at' | 'updated_at'> &
+type WithMeta = { id: string; created_at: string; updated_at: string }
+export type Insert<T extends WithMeta> = Omit<T, keyof WithMeta> &
   Partial<Pick<T, 'id'>>
-export type Update<T> = Partial<Omit<T, 'id' | 'created_at' | 'updated_at'>>
+export type Update<T extends WithMeta> = Partial<Omit<T, keyof WithMeta>>
 
 // ---------- Database (forma estilo supabase-js) ----------
 export interface Database {
@@ -193,6 +194,21 @@ export interface Database {
         Row: Alert
         Insert: Insert<Alert>
         Update: Update<Alert>
+      }
+    }
+    Functions: {
+      submit_booking_request: {
+        Args: {
+          p_full_name: string
+          p_document_number: string
+          p_phone: string
+          p_email: string
+          p_vehicle_id: string
+          p_start_at: string
+          p_end_at: string
+          p_notes: string
+        }
+        Returns: string
       }
     }
   }

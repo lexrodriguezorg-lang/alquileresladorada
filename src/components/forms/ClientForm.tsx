@@ -2,7 +2,7 @@ import { useForm } from 'react-hook-form'
 import { zodResolver } from '@hookform/resolvers/zod'
 import { useState } from 'react'
 import { supabase } from '../../lib/supabase'
-import { clientSchema, type ClientInput } from '../../lib/schemas'
+import { clientSchema, cleanClient, type ClientInput } from '../../lib/schemas'
 import FormField, { inputCls, btnPrimary, btnSecondary } from '../FormField'
 
 interface Props {
@@ -27,7 +27,7 @@ export default function ClientForm({ onSuccess, onCancel }: Props) {
 
   const onSubmit = async (values: ClientInput) => {
     setServerError(null)
-    const { error } = await supabase.from('clients').insert(values)
+    const { error } = await supabase.from('clients').insert(cleanClient(values))
     if (error) return setServerError(error.message)
     onSuccess()
   }

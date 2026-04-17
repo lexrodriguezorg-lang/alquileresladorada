@@ -2,7 +2,7 @@ import { useEffect, useState } from 'react'
 import { useForm } from 'react-hook-form'
 import { zodResolver } from '@hookform/resolvers/zod'
 import { supabase } from '../../lib/supabase'
-import { contractSchema, type ContractInput } from '../../lib/schemas'
+import { contractSchema, cleanContract, type ContractInput } from '../../lib/schemas'
 import FormField, { inputCls, btnPrimary, btnSecondary } from '../FormField'
 
 interface Props {
@@ -69,7 +69,7 @@ export default function ContractForm({ onSuccess, onCancel }: Props) {
 
   const onSubmit = async (values: ContractInput) => {
     setServerError(null)
-    const { error } = await supabase.from('contracts').insert(values)
+    const { error } = await supabase.from('contracts').insert(cleanContract(values))
     if (error) return setServerError(error.message)
     onSuccess()
   }

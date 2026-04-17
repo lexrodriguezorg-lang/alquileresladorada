@@ -19,16 +19,16 @@ const bookingSchema = z
     full_name: z.string().min(3, 'Nombre completo requerido'),
     document_number: z.string().min(5, 'Documento requerido'),
     phone: z.string().min(7, 'Teléfono requerido'),
-    email: z.preprocess(
-      (v) => (v === '' || v == null ? undefined : v),
-      z.string().email('Correo inválido').optional()
-    ),
+    email: z
+      .string()
+      .optional()
+      .refine(
+        (s) => !s || s.trim() === '' || /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(s),
+        'Correo inválido'
+      ),
     start_date: z.string().min(1, 'Fecha de inicio requerida'),
     end_date: z.string().min(1, 'Fecha de fin requerida'),
-    notes: z.preprocess(
-      (v) => (v === '' || v == null ? undefined : v),
-      z.string().optional()
-    ),
+    notes: z.string().optional(),
   })
   .refine((v) => new Date(v.end_date) > new Date(v.start_date), {
     message: 'La fecha de fin debe ser posterior a la de inicio',

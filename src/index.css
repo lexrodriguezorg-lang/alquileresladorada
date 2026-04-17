@@ -1,0 +1,28 @@
+@import url('https://fonts.googleapis.com/css2?family=Barlow+Condensed:wght@600;700;800;900&family=Outfit:wght@300;400;500;600;700;800&display=swap');
+@import "tailwindcss";
+
+@theme {
+  --font-sans: 'Outfit', system-ui, -apple-system, 'Segoe UI', sans-serif;
+  --font-brand: 'Barlow Condensed', 'Outfit', system-ui, sans-serif;
+
+  /* Marca */
+  --color-brand: #E8192C;
+  --color-brand-hover: #C8152A;
+  --color-brand-soft: #FEE2E4;
+
+  /* Neutrales */
+  --color-ink: #111827;
+  --color-ink-soft: #6B7280;
+  --color-line: #E5E7EB;
+  --color-surface: #F9FAFB;
+}
+
+html,
+body,
+#root {
+  background: #FFFFFF;
+  color: var(--color-ink);
+  font-family: var(--font-sans);
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+}

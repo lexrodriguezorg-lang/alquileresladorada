@@ -1044,7 +1044,10 @@ type VehicleFormValues = {
   notes: string
 }
 
-const PLATE_REGEX = /^[A-Z]{3}-?\d{2,3}[A-Z]?$/
+// Placa colombiana:
+//  - Carros: 3 letras + 3 dígitos (ABC-123 o ABC123)
+//  - Motos:  3 letras + 2 dígitos + 1 letra (ABC-12D o ABC12D)
+const PLATE_REGEX = /^[A-Z]{3}-?(\d{3}|\d{2}[A-Z])$/
 const todayISO = () => new Date().toISOString().split('T')[0]
 
 function Step4Fleet({

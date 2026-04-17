@@ -30,7 +30,10 @@ const COLUMNS = [
   'status',
 ] as const
 
-const PLATE_RE = /^[A-Z]{3}-?\d{2,3}[A-Z]?$/
+// Placa colombiana:
+//  - Carros: 3 letras + 3 dígitos (ABC-123 o ABC123)
+//  - Motos:  3 letras + 2 dígitos + 1 letra (ABC-12D o ABC12D)
+const PLATE_RE = /^[A-Z]{3}-?(\d{3}|\d{2}[A-Z])$/
 const DATE_RE = /^\d{4}-\d{2}-\d{2}$/
 const TYPES = ['moto', 'carro', 'camioneta', 'otro'] as const
 const STATUSES = ['disponible', 'alquilado', 'mantenimiento', 'inactivo'] as const

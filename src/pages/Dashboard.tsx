@@ -1,4 +1,5 @@
 import { useEffect, useState } from 'react'
+import { Link } from 'react-router-dom'
 import { supabase } from '../lib/supabase'
 import type {
   Alert,
@@ -59,6 +60,27 @@ export default function Dashboard() {
   const [alerts, setAlerts] = useState<Alert[]>([])
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
+  const [onboarding, setOnboarding] = useState<{
+    completed: boolean
+    step: number
+  } | null>(null)
+
+  useEffect(() => {
+    supabase
+      .from('business_config')
+      .select('onboarding_completed, onboarding_step')
+      .order('updated_at', { ascending: false })
+      .limit(1)
+      .maybeSingle()
+      .then(({ data }) => {
+        if (!data) setOnboarding({ completed: false, step: 1 })
+        else
+          setOnboarding({
+            completed: !!data.onboarding_completed,
+            step: data.onboarding_step ?? 1,
+          })
+      })
+  }, [])
 
   useEffect(() => {
     let cancelled = false
@@ -154,6 +176,35 @@ export default function Dashboard() {
             <span className="font-semibold text-brand">Error: </span>
             {error}
           </div>
+        )}
+
+        {onboarding && !onboarding.completed && (
+          <Link
+            to="/onboarding"
+            className="block rounded-xl border border-brand/30 bg-gradient-to-r from-brand-soft to-white p-5 transition hover:-translate-y-0.5 hover:shadow-lg"
+          >
+            <div className="flex flex-wrap items-center justify-between gap-4">
+              <div>
+                <div
+                  className="text-[10px] font-bold uppercase tracking-[0.22em] text-brand"
+                  style={{ fontFamily: 'var(--font-brand)' }}
+                >
+                  Configuración pendiente
+                </div>
+                <h3 className="mt-1 text-lg font-bold text-gray-900">
+                  {onboarding.step > 1
+                    ? `Continúa desde el paso ${onboarding.step}`
+                    : 'Configura tu negocio'}
+                </h3>
+                <p className="mt-1 text-sm text-gray-600">
+                  Completa los datos del negocio, políticas, métodos de pago y tu flota.
+                </p>
+              </div>
+              <span className="rounded-full bg-brand px-5 py-2.5 text-sm font-bold uppercase tracking-wider text-white">
+                {onboarding.step > 1 ? 'Continuar' : 'Empezar'} →
+              </span>
+            </div>
+          </Link>
         )}
 
         {/* ------------------ FLOTA ------------------ */}

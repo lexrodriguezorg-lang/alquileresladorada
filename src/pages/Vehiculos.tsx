@@ -1,4 +1,5 @@
 import { useCallback, useEffect, useMemo, useState } from 'react'
+import { useNavigate } from 'react-router-dom'
 import { supabase } from '../lib/supabase'
 import type { Vehicle, VehicleStatus } from '../lib/database.types'
 import PageHeader from '../components/PageHeader'
@@ -26,6 +27,7 @@ export default function Vehiculos() {
   const [query, setQuery] = useState('')
   const [statusFilter, setStatusFilter] = useState<VehicleStatus | 'all'>('all')
   const [modalOpen, setModalOpen] = useState(false)
+  const navigate = useNavigate()
 
   const load = useCallback(async () => {
     setLoading(true)
@@ -146,7 +148,11 @@ export default function Vehiculos() {
                   </tr>
                 )}
                 {filtered.map((v) => (
-                  <tr key={v.id} className="transition hover:bg-gray-50">
+                  <tr
+                    key={v.id}
+                    onClick={() => navigate(`/vehiculos/${v.id}`)}
+                    className="cursor-pointer transition hover:bg-gray-50"
+                  >
                     <td className="px-4 py-3 font-mono font-semibold text-gray-900">
                       {v.plate}
                     </td>

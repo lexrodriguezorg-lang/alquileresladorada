@@ -4,10 +4,12 @@ import ProtectedRoute from './components/ProtectedRoute'
 import Layout from './components/Layout'
 import Dashboard from './pages/Dashboard'
 import Vehiculos from './pages/Vehiculos'
+import VehiculoDetalle from './pages/VehiculoDetalle'
 import Clientes from './pages/Clientes'
 import Contratos from './pages/Contratos'
 import Recibos from './pages/Recibos'
 import Solicitudes from './pages/Solicitudes'
+import Onboarding from './pages/Onboarding'
 import Login from './pages/Login'
 import Publico from './pages/Publico'
 import PublicoVehiculo from './pages/PublicoVehiculo'
@@ -24,6 +26,16 @@ function App() {
           {/* Login */}
           <Route path="/login" element={<Login />} />
 
+          {/* Onboarding — protegido pero sin Layout */}
+          <Route
+            path="/onboarding"
+            element={
+              <ProtectedRoute>
+                <Onboarding />
+              </ProtectedRoute>
+            }
+          />
+
           {/* Panel admin (protegido) */}
           <Route
             element={
@@ -35,6 +47,7 @@ function App() {
             <Route index element={<Dashboard />} />
             <Route path="solicitudes" element={<Solicitudes />} />
             <Route path="vehiculos" element={<Vehiculos />} />
+            <Route path="vehiculos/:id" element={<VehiculoDetalle />} />
             <Route path="clientes" element={<Clientes />} />
             <Route path="contratos" element={<Contratos />} />
             <Route path="recibos" element={<Recibos />} />

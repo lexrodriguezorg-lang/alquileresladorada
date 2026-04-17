@@ -8,7 +8,8 @@ export function vehiclePhoto(
   photos: string[] | null | undefined,
   type: VehicleType
 ): string {
-  if (photos && photos.length > 0 && photos[0]) return photos[0]
+  const first = (photos ?? []).find((p) => !!p && p.trim() !== '')
+  if (first) return first
   return placeholderByType(type)
 }
 
@@ -16,7 +17,8 @@ export function vehicleGallery(
   photos: string[] | null | undefined,
   type: VehicleType
 ): string[] {
-  if (photos && photos.length > 0) return photos
+  const valid = (photos ?? []).filter((p) => !!p && p.trim() !== '')
+  if (valid.length > 0) return valid
   return [placeholderByType(type)]
 }
 

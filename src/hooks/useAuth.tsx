@@ -10,6 +10,10 @@ interface AuthContextValue {
   signIn: (email: string, password: string) => Promise<void>
   signUp: (email: string, password: string) => Promise<void>
   signOut: () => Promise<void>
+  /** Envía email con link para resetear contraseña */
+  resetPassword: (email: string) => Promise<void>
+  /** Cambia la contraseña del usuario actualmente logueado (post-recovery) */
+  updatePassword: (newPassword: string) => Promise<void>
 }
 
 const AuthContext = createContext<AuthContextValue | undefined>(undefined)
@@ -52,6 +56,16 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     },
     async signOut() {
       const { error } = await supabase.auth.signOut()
+      if (error) throw error
+    },
+    async resetPassword(email) {
+      const { error } = await supabase.auth.resetPasswordForEmail(email, {
+        redirectTo: `${window.location.origin}/reset-password`,
+      })
+      if (error) throw error
+    },
+    async updatePassword(newPassword) {
+      const { error } = await supabase.auth.updateUser({ password: newPassword })
       if (error) throw error
     },
   }

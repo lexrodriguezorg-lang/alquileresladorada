@@ -11,6 +11,7 @@ import Recibos from './pages/Recibos'
 import Solicitudes from './pages/Solicitudes'
 import Onboarding from './pages/Onboarding'
 import Login from './pages/Login'
+import ResetPassword from './pages/ResetPassword'
 import Publico from './pages/Publico'
 import PublicoVehiculo from './pages/PublicoVehiculo'
 
@@ -23,8 +24,9 @@ function App() {
           <Route path="/publico" element={<Publico />} />
           <Route path="/publico/vehiculo/:id" element={<PublicoVehiculo />} />
 
-          {/* Login */}
+          {/* Login + recuperación */}
           <Route path="/login" element={<Login />} />
+          <Route path="/reset-password" element={<ResetPassword />} />
 
           {/* Onboarding — protegido pero sin Layout */}
           <Route

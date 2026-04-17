@@ -3,6 +3,7 @@ import { useNavigate } from 'react-router-dom'
 import { useForm, useFieldArray } from 'react-hook-form'
 import { supabase } from '../lib/supabase'
 import BrandMark from '../components/BrandMark'
+import { syncVehicleExpiryAlerts } from '../lib/alerts'
 
 // ------------------------------------------------------------------
 // Pasos
@@ -516,16 +517,31 @@ function Step1Business({
 }
 
 // ================================================================
-// PASO 2 · Políticas
+// PASO 2 · Políticas (versión completa)
 // ================================================================
+type FuelType = 'lleno' | 'vacio' | 'medio'
+type MileageType = 'limitado' | 'libre'
+type ZoneType = 'local' | 'departamental' | 'nacional'
+
 type Step2Values = {
   requirements: string
-  deposit_amount: string
-  deposit_note: string
-  zones: string
-  fuel_policy: string
-  mileage_policy: string
+  doc_cedula: boolean
+  doc_licencia: boolean
+  doc_foto: boolean
+  doc_referencias: boolean
+  doc_otro: boolean
+  doc_otro_text: string
+  deposit_policy: string
+  fuel_policy_type: FuelType
+  fuel_policy_note: string
+  mileage_policy_type: MileageType
+  mileage_limit: string
+  zones_type: ZoneType
+  zones_exceptions: string
   cancellation_policy: string
+  late_return_hourly: string
+  late_return_daily: string
+  damages_policy: string
 }
 
 function Step2Policies({
@@ -539,86 +555,330 @@ function Step2Policies({
   onNext: (patch: Partial<Config>) => void
   onBack: () => void
 }) {
-  const p = defaults.policies ?? {}
-  const { register, handleSubmit } = useForm<Step2Values>({
+  // 'p' viene como jsonb arbitrario; lo casteamos
+  const p = (defaults.policies as Record<string, unknown>) ?? {}
+  const docs = (p.documents as string[]) ?? ['cedula', 'licencia']
+
+  const {
+    register,
+    handleSubmit,
+    watch,
+    formState: { errors },
+  } = useForm<Step2Values>({
     defaultValues: {
-      requirements: (p.requirements ?? [
-        'Cédula de ciudadanía o extranjería vigente',
-        'Licencia de conducción',
-        'Comprobante de residencia reciente',
-        'Depósito de garantía (reembolsable)',
-        'Edad mínima 21 años',
-      ]).join('\n'),
-      deposit_amount: p.deposit_amount ? String(p.deposit_amount) : '',
-      deposit_note: p.deposit_note ?? '',
-      zones: p.zones ?? 'La Dorada y sus veredas. Para salidas a otros municipios, consultar.',
-      fuel_policy: p.fuel_policy ?? 'El vehículo se entrega y devuelve con tanque lleno.',
-      mileage_policy: p.mileage_policy ?? 'Sin límite de kilometraje dentro de La Dorada.',
-      cancellation_policy: p.cancellation_policy ?? 'Cancelación sin costo hasta 24 horas antes de la entrega.',
+      requirements: (p.requirements as string) ?? '',
+      doc_cedula: docs.includes('cedula'),
+      doc_licencia: docs.includes('licencia'),
+      doc_foto: docs.includes('foto_cliente'),
+      doc_referencias: docs.includes('referencias'),
+      doc_otro: !!p.documents_other,
+      doc_otro_text: (p.documents_other as string) ?? '',
+      deposit_policy: (p.deposit_policy as string) ?? '',
+      fuel_policy_type: (p.fuel_policy_type as FuelType) ?? 'lleno',
+      fuel_policy_note: (p.fuel_policy_note as string) ?? '',
+      mileage_policy_type: (p.mileage_policy_type as MileageType) ?? 'libre',
+      mileage_limit: p.mileage_limit ? String(p.mileage_limit) : '',
+      zones_type: (p.zones_type as ZoneType) ?? 'local',
+      zones_exceptions: (p.zones_exceptions as string) ?? '',
+      cancellation_policy: (p.cancellation_policy as string) ?? '',
+      late_return_hourly: p.late_return_hourly
+        ? String(p.late_return_hourly)
+        : '',
+      late_return_daily: p.late_return_daily
+        ? String(p.late_return_daily)
+        : '',
+      damages_policy: (p.damages_policy as string) ?? '',
     },
   })
 
+  const mileageType = watch('mileage_policy_type')
+  const docOtro = watch('doc_otro')
+  const anyDoc =
+    watch('doc_cedula') ||
+    watch('doc_licencia') ||
+    watch('doc_foto') ||
+    watch('doc_referencias') ||
+    watch('doc_otro')
+
   const submit = (v: Step2Values) => {
-    const requirements = v.requirements
-      .split('\n')
-      .map((s) => s.trim())
-      .filter(Boolean)
-    const depositNum = Number(v.deposit_amount)
+    if (!anyDoc) return
+    const documents: string[] = []
+    if (v.doc_cedula) documents.push('cedula')
+    if (v.doc_licencia) documents.push('licencia')
+    if (v.doc_foto) documents.push('foto_cliente')
+    if (v.doc_referencias) documents.push('referencias')
+    if (v.doc_otro && v.doc_otro_text.trim()) documents.push('otro')
+
     onNext({
       policies: {
-        requirements,
-        deposit_amount: Number.isFinite(depositNum) && depositNum > 0 ? depositNum : undefined,
-        deposit_note: v.deposit_note.trim() || undefined,
-        zones: v.zones.trim() || undefined,
-        fuel_policy: v.fuel_policy.trim() || undefined,
-        mileage_policy: v.mileage_policy.trim() || undefined,
-        cancellation_policy: v.cancellation_policy.trim() || undefined,
-      },
+        requirements: v.requirements.trim(),
+        documents,
+        documents_other: v.doc_otro ? v.doc_otro_text.trim() : undefined,
+        deposit_policy: v.deposit_policy.trim(),
+        fuel_policy_type: v.fuel_policy_type,
+        fuel_policy_note: v.fuel_policy_note.trim() || undefined,
+        mileage_policy_type: v.mileage_policy_type,
+        mileage_limit:
+          v.mileage_policy_type === 'limitado' && v.mileage_limit
+            ? Number(v.mileage_limit)
+            : undefined,
+        zones_type: v.zones_type,
+        zones_exceptions: v.zones_exceptions.trim() || undefined,
+        cancellation_policy: v.cancellation_policy.trim(),
+        late_return_hourly: Number(v.late_return_hourly) || 0,
+        late_return_daily: Number(v.late_return_daily) || 0,
+        damages_policy: v.damages_policy.trim(),
+      } as unknown as Policies,
     })
   }
+
+  const checkbox =
+    'flex items-center gap-2 rounded-md border border-gray-200 bg-white px-3 py-2 text-sm cursor-pointer hover:border-brand'
 
   return (
     <form
       onSubmit={handleSubmit(submit)}
-      className="grid grid-cols-2 gap-4 rounded-2xl border border-gray-200 bg-white p-6 md:p-8"
+      className="grid grid-cols-2 gap-5 rounded-2xl border border-gray-200 bg-white p-6 md:p-8"
     >
       <p className="col-span-2 text-sm text-gray-600">
         Define las reglas claras del negocio. Esto protege a tus clientes y a
         ti.
       </p>
 
-      <Field label="Requisitos (uno por línea)" full>
+      {/* ---------- Requisitos ---------- */}
+      <Field
+        label="Requisitos mínimos del cliente"
+        full
+        error={errors.requirements?.message}
+      >
         <textarea
-          {...register('requirements')}
-          className={`${inputCls} min-h-[120px] font-medium`}
+          {...register('requirements', {
+            required: 'Describe los requisitos mínimos',
+            minLength: { value: 10, message: 'Mínimo 10 caracteres' },
+          })}
+          placeholder="Edad mínima, antigüedad licencia, tipo de uso permitido…"
+          className={`${inputCls} min-h-[90px]`}
         />
       </Field>
 
-      <Field label="Depósito base (COP)" hint="Monto de garantía reembolsable">
-        <input type="number" {...register('deposit_amount')} className={inputCls} placeholder="100000" />
+      {/* ---------- Documentos ---------- */}
+      <div className="col-span-2">
+        <label className="mb-2 block text-[11px] font-semibold uppercase tracking-[0.14em] text-gray-500">
+          Documentos que se piden al arrendar
+        </label>
+        <div className="grid grid-cols-1 gap-2 sm:grid-cols-2">
+          <label className={checkbox}>
+            <input
+              type="checkbox"
+              {...register('doc_cedula')}
+              className="accent-[#E8192C]"
+            />
+            Cédula
+          </label>
+          <label className={checkbox}>
+            <input
+              type="checkbox"
+              {...register('doc_licencia')}
+              className="accent-[#E8192C]"
+            />
+            Licencia de conducción
+          </label>
+          <label className={checkbox}>
+            <input
+              type="checkbox"
+              {...register('doc_foto')}
+              className="accent-[#E8192C]"
+            />
+            Foto del cliente
+          </label>
+          <label className={checkbox}>
+            <input
+              type="checkbox"
+              {...register('doc_referencias')}
+              className="accent-[#E8192C]"
+            />
+            Referencias
+          </label>
+          <label className={`${checkbox} sm:col-span-2`}>
+            <input
+              type="checkbox"
+              {...register('doc_otro')}
+              className="accent-[#E8192C]"
+            />
+            Otro
+            {docOtro && (
+              <input
+                {...register('doc_otro_text', {
+                  required: docOtro ? '¿Cuál?' : false,
+                })}
+                className={`${inputCls} ml-2 flex-1`}
+                placeholder="Especifica…"
+              />
+            )}
+          </label>
+        </div>
+        {!anyDoc && (
+          <p className="mt-1 text-xs text-brand">
+            Selecciona al menos un documento.
+          </p>
+        )}
+        {errors.doc_otro_text && (
+          <p className="mt-1 text-xs text-brand">
+            {errors.doc_otro_text.message}
+          </p>
+        )}
+      </div>
+
+      {/* ---------- Depósito ---------- */}
+      <Field
+        label="Política de depósito"
+        full
+        hint="Cuándo se cobra, cómo, cuándo se devuelve"
+        error={errors.deposit_policy?.message}
+      >
+        <textarea
+          {...register('deposit_policy', {
+            required: 'Describe la política de depósito',
+            minLength: { value: 10, message: 'Mínimo 10 caracteres' },
+          })}
+          className={`${inputCls} min-h-[80px]`}
+          placeholder="Ej: Depósito de $100.000 al entregar el vehículo, devuelto en efectivo al retorno si no hay daños…"
+        />
       </Field>
-      <Field label="Detalle del depósito">
-        <input
-          {...register('deposit_note')}
+
+      {/* ---------- Combustible ---------- */}
+      <Field label="Política de combustible" error={errors.fuel_policy_type?.message}>
+        <select
+          {...register('fuel_policy_type', { required: true })}
           className={inputCls}
-          placeholder="Reembolsable al entregar el vehículo"
+        >
+          <option value="lleno">Tanque lleno (entrega y devuelve)</option>
+          <option value="medio">Medio tanque</option>
+          <option value="vacio">Vacío</option>
+        </select>
+      </Field>
+      <Field label="Aclaración (opcional)">
+        <input
+          {...register('fuel_policy_note')}
+          className={inputCls}
+          placeholder="Ej: Se cobra recargo por faltante"
         />
       </Field>
 
-      <Field label="Zonas permitidas" full>
-        <textarea {...register('zones')} className={`${inputCls} min-h-[60px]`} />
+      {/* ---------- Kilometraje ---------- */}
+      <Field label="Política de kilometraje">
+        <select
+          {...register('mileage_policy_type', { required: true })}
+          className={inputCls}
+        >
+          <option value="libre">Sin límite (libre)</option>
+          <option value="limitado">Limitado por día</option>
+        </select>
+      </Field>
+      <Field
+        label="Límite (km/día)"
+        hint={mileageType === 'libre' ? 'No aplica' : ''}
+        error={errors.mileage_limit?.message}
+      >
+        <input
+          type="number"
+          {...register('mileage_limit', {
+            validate: (v) =>
+              mileageType !== 'limitado' ||
+              (Number(v) > 0 ? true : 'Indica los km por día'),
+          })}
+          disabled={mileageType !== 'limitado'}
+          placeholder={mileageType === 'limitado' ? '200' : '—'}
+          className={`${inputCls} disabled:bg-gray-50 disabled:text-gray-400`}
+        />
       </Field>
 
-      <Field label="Política de combustible" full>
-        <textarea {...register('fuel_policy')} className={`${inputCls} min-h-[60px]`} />
+      {/* ---------- Zonas ---------- */}
+      <Field label="Zonas permitidas">
+        <select
+          {...register('zones_type', { required: true })}
+          className={inputCls}
+        >
+          <option value="local">Solo La Dorada</option>
+          <option value="departamental">Caldas (departamental)</option>
+          <option value="nacional">Nacional</option>
+        </select>
+      </Field>
+      <Field label="Excepciones (opcional)">
+        <input
+          {...register('zones_exceptions')}
+          className={inputCls}
+          placeholder="Ej: prohibido salir a vías destapadas"
+        />
       </Field>
 
-      <Field label="Política de kilometraje" full>
-        <textarea {...register('mileage_policy')} className={`${inputCls} min-h-[60px]`} />
+      {/* ---------- Cancelación ---------- */}
+      <Field
+        label="Política de cancelación"
+        full
+        error={errors.cancellation_policy?.message}
+      >
+        <textarea
+          {...register('cancellation_policy', {
+            required: 'Describe la política de cancelación',
+            minLength: { value: 10, message: 'Mínimo 10 caracteres' },
+          })}
+          className={`${inputCls} min-h-[70px]`}
+          placeholder="Ej: cancelación sin costo hasta 24h antes de la entrega…"
+        />
       </Field>
 
-      <Field label="Política de cancelación" full>
-        <textarea {...register('cancellation_policy')} className={`${inputCls} min-h-[60px]`} />
+      {/* ---------- Retraso en devolución ---------- */}
+      <div className="col-span-2 rounded-xl border border-gray-200 bg-[#F9FAFB] p-4">
+        <div className="mb-3 text-[11px] font-bold uppercase tracking-[0.14em] text-gray-500">
+          Retraso en la devolución
+        </div>
+        <div className="grid grid-cols-2 gap-4">
+          <Field
+            label="Hora extra (COP)"
+            error={errors.late_return_hourly?.message}
+          >
+            <input
+              type="number"
+              {...register('late_return_hourly', {
+                required: 'Requerido',
+                min: { value: 0, message: 'No puede ser negativo' },
+              })}
+              className={inputCls}
+              placeholder="5000"
+            />
+          </Field>
+          <Field
+            label="Día extra (COP)"
+            error={errors.late_return_daily?.message}
+          >
+            <input
+              type="number"
+              {...register('late_return_daily', {
+                required: 'Requerido',
+                min: { value: 0, message: 'No puede ser negativo' },
+              })}
+              className={inputCls}
+              placeholder="60000"
+            />
+          </Field>
+        </div>
+      </div>
+
+      {/* ---------- Daños ---------- */}
+      <Field
+        label="Política de daños y siniestros"
+        full
+        error={errors.damages_policy?.message}
+      >
+        <textarea
+          {...register('damages_policy', {
+            required: 'Describe la política de daños',
+            minLength: { value: 10, message: 'Mínimo 10 caracteres' },
+          })}
+          className={`${inputCls} min-h-[80px]`}
+          placeholder="Ej: ante choque o pérdida, el cliente cubre deducible y reposición…"
+        />
       </Field>
 
       <WizardActions onBack={onBack} saving={saving} />
@@ -764,25 +1024,28 @@ type VehicleRow = {
   status: string
 }
 
-const VEHICLE_TYPES = [
-  { v: 'moto', l: 'Moto' },
-  { v: 'carro', l: 'Carro' },
-  { v: 'camioneta', l: 'Camioneta' },
-  { v: 'otro', l: 'Otro' },
-]
-
 type VehicleFormValues = {
-  plate: string
+  vehicle_type: 'moto' | 'carro'
   brand: string
   model: string
   year: string
+  plate: string
   color: string
-  vehicle_type: string
+  engine: string // cc para moto, litros para carro
+  mileage_km: string
   daily_rate: string
   weekly_rate: string
   monthly_rate: string
-  engine_cc: string
+  specific_deposit: string
+  soat_expiry: string
+  rtm_expiry: string
+  requirements_specific: string
+  zone_restrictions: string
+  notes: string
 }
+
+const PLATE_REGEX = /^[A-Z]{3}-?\d{2,3}[A-Z]?$/
+const todayISO = () => new Date().toISOString().split('T')[0]
 
 function Step4Fleet({
   onBack,
@@ -922,102 +1185,325 @@ function InlineVehicleForm({
   onCancel: () => void
   onSaved: () => void
 }) {
-  const { register, handleSubmit, reset } = useForm<VehicleFormValues>({
+  const {
+    register,
+    handleSubmit,
+    watch,
+    reset,
+    formState: { errors },
+  } = useForm<VehicleFormValues>({
     defaultValues: {
       vehicle_type: 'moto',
+      brand: '',
+      model: '',
       year: '',
+      plate: '',
       color: '',
+      engine: '',
+      mileage_km: '',
+      daily_rate: '',
       weekly_rate: '',
       monthly_rate: '',
-      engine_cc: '',
+      specific_deposit: '',
+      soat_expiry: '',
+      rtm_expiry: '',
+      requirements_specific: '',
+      zone_restrictions: '',
+      notes: '',
     },
   })
+  const type = watch('vehicle_type')
   const [err, setErr] = useState<string | null>(null)
   const [saving, setSaving] = useState(false)
 
   const submit = async (v: VehicleFormValues) => {
     setErr(null)
-    if (!v.plate?.trim() || !v.brand?.trim() || !v.model?.trim() || !v.daily_rate?.trim()) {
-      setErr('Placa, marca, modelo y tarifa diaria son obligatorios')
-      return
-    }
     setSaving(true)
-    const num = (s: string) => {
-      const n = Number(String(s).trim())
-      return Number.isFinite(n) && n > 0 ? n : null
+    try {
+      const num = (s: string) => {
+        const n = Number(String(s).trim())
+        return Number.isFinite(n) && n >= 0 ? n : null
+      }
+      const numPos = (s: string) => {
+        const n = Number(String(s).trim())
+        return Number.isFinite(n) && n > 0 ? n : null
+      }
+      const engineNum = num(v.engine)
+
+      const payload: Record<string, unknown> = {
+        vehicle_type: v.vehicle_type,
+        brand: v.brand.trim(),
+        model: v.model.trim(),
+        year: Number(v.year),
+        plate: v.plate.trim().toUpperCase(),
+        color: v.color.trim(),
+        mileage_km: num(v.mileage_km),
+        daily_rate: Number(v.daily_rate),
+        weekly_rate: numPos(v.weekly_rate),
+        monthly_rate: numPos(v.monthly_rate),
+        specific_deposit: numPos(v.specific_deposit),
+        soat_expiry: v.soat_expiry || null,
+        rtm_expiry: v.rtm_expiry || null,
+        requirements_specific: v.requirements_specific.trim() || null,
+        zone_restrictions: v.zone_restrictions.trim() || null,
+        notes: v.notes.trim() || null,
+        status: 'disponible',
+      }
+      if (v.vehicle_type === 'moto') {
+        payload.engine_cc = engineNum
+        payload.engine_liters = null
+      } else {
+        // Para carros: el campo "Motor" se interpreta como litros
+        payload.engine_liters = engineNum
+        payload.engine_cc = null
+      }
+
+      const { data, error } = await supabase
+        .from('vehicles')
+        .insert(payload)
+        .select('id, plate, soat_expiry, rtm_expiry')
+        .single()
+      if (error) throw error
+
+      // Genera alertas SOAT/RTM (no bloquea si falla)
+      try {
+        await syncVehicleExpiryAlerts(data)
+      } catch (alertErr) {
+        console.warn('No se pudieron crear las alertas:', alertErr)
+      }
+
+      reset()
+      onSaved()
+    } catch (e: unknown) {
+      setErr(e instanceof Error ? e.message : 'Error guardando el vehículo')
+    } finally {
+      setSaving(false)
     }
-    const payload = {
-      plate: v.plate.trim().toUpperCase(),
-      brand: v.brand.trim(),
-      model: v.model.trim(),
-      year: num(v.year),
-      color: v.color?.trim() || null,
-      vehicle_type: v.vehicle_type,
-      daily_rate: Number(v.daily_rate),
-      weekly_rate: num(v.weekly_rate),
-      monthly_rate: num(v.monthly_rate),
-      engine_cc: num(v.engine_cc),
-      status: 'disponible',
-    }
-    const { error } = await supabase.from('vehicles').insert(payload)
-    setSaving(false)
-    if (error) {
-      setErr(error.message)
-      return
-    }
-    reset()
-    onSaved()
   }
 
   return (
     <form
       onSubmit={handleSubmit(submit)}
-      className="grid grid-cols-2 gap-3 rounded-xl border border-brand/30 bg-brand-soft/40 p-4"
+      className="space-y-5 rounded-xl border border-brand/30 bg-brand-soft/40 p-5"
     >
-      <Field label="Placa" error={undefined}>
-        <input {...register('plate', { required: true })} className={inputCls} placeholder="ABC-123" />
-      </Field>
-      <Field label="Tipo">
-        <select {...register('vehicle_type')} className={inputCls}>
-          {VEHICLE_TYPES.map((t) => (
-            <option key={t.v} value={t.v}>
-              {t.l}
-            </option>
-          ))}
-        </select>
-      </Field>
-      <Field label="Marca">
-        <input {...register('brand', { required: true })} className={inputCls} />
-      </Field>
-      <Field label="Modelo">
-        <input {...register('model', { required: true })} className={inputCls} />
-      </Field>
-      <Field label="Año">
-        <input type="number" {...register('year')} className={inputCls} />
-      </Field>
-      <Field label="Color">
-        <input {...register('color')} className={inputCls} />
-      </Field>
-      <Field label="Cilindraje (cc)">
-        <input type="number" {...register('engine_cc')} className={inputCls} />
-      </Field>
-      <Field label="Tarifa diaria (COP)">
-        <input type="number" {...register('daily_rate', { required: true })} className={inputCls} placeholder="50000" />
-      </Field>
-      <Field label="Tarifa semanal">
-        <input type="number" {...register('weekly_rate')} className={inputCls} />
-      </Field>
-      <Field label="Tarifa mensual">
-        <input type="number" {...register('monthly_rate')} className={inputCls} />
-      </Field>
+      {/* ---------- Datos básicos ---------- */}
+      <FormSection title="Datos básicos">
+        <Field label="Tipo">
+          <select {...register('vehicle_type')} className={inputCls}>
+            <option value="moto">Moto</option>
+            <option value="carro">Carro</option>
+          </select>
+        </Field>
+        <Field label="Color" error={errors.color?.message}>
+          <input
+            {...register('color', { required: 'Color requerido' })}
+            className={inputCls}
+            placeholder="Negro, Rojo…"
+          />
+        </Field>
+        <Field label="Marca" error={errors.brand?.message}>
+          <input
+            {...register('brand', { required: 'Marca requerida' })}
+            className={inputCls}
+            placeholder="Yamaha, Honda…"
+          />
+        </Field>
+        <Field label="Modelo" error={errors.model?.message}>
+          <input
+            {...register('model', { required: 'Modelo requerido' })}
+            className={inputCls}
+            placeholder="FZ 2.0, Spark GT…"
+          />
+        </Field>
+        <Field label="Año" error={errors.year?.message}>
+          <input
+            type="number"
+            {...register('year', {
+              required: 'Año requerido',
+              valueAsNumber: false,
+              min: { value: 1990, message: 'Año mínimo 1990' },
+              max: { value: 2026, message: 'Año máximo 2026' },
+            })}
+            className={inputCls}
+            placeholder="2023"
+          />
+        </Field>
+        <Field
+          label="Placa"
+          hint="Formato: ABC-123 o ABC-12D"
+          error={errors.plate?.message}
+        >
+          <input
+            {...register('plate', {
+              required: 'Placa requerida',
+              setValueAs: (v) =>
+                typeof v === 'string' ? v.trim().toUpperCase() : v,
+              validate: (val) => {
+                const p = String(val).trim().toUpperCase()
+                return PLATE_REGEX.test(p)
+                  ? true
+                  : 'Formato inválido (ej: ABC-123 o ABC12D)'
+              },
+            })}
+            className={`${inputCls} uppercase`}
+            placeholder="ABC-123"
+          />
+        </Field>
+      </FormSection>
+
+      {/* ---------- Características ---------- */}
+      <FormSection title="Características">
+        <Field
+          label={type === 'moto' ? 'Cilindraje (cc)' : 'Motor (litros)'}
+          hint={type === 'moto' ? 'Ej: 125, 250' : 'Ej: 1.6, 2.0'}
+          error={errors.engine?.message}
+        >
+          <input
+            type="number"
+            step={type === 'moto' ? '1' : '0.1'}
+            {...register('engine', {
+              required: type === 'moto' ? 'Cilindraje requerido' : 'Motor requerido',
+              min: { value: 0.1, message: 'Valor inválido' },
+            })}
+            className={inputCls}
+            placeholder={type === 'moto' ? '125' : '1.6'}
+          />
+        </Field>
+        <Field label="Kilometraje actual" error={errors.mileage_km?.message}>
+          <input
+            type="number"
+            {...register('mileage_km', {
+              required: 'Kilometraje requerido',
+              min: { value: 0, message: 'No puede ser negativo' },
+            })}
+            className={inputCls}
+            placeholder="12300"
+          />
+        </Field>
+      </FormSection>
+
+      {/* ---------- Precios ---------- */}
+      <FormSection title="Precios">
+        <Field
+          label="Precio por día (COP)"
+          error={errors.daily_rate?.message}
+        >
+          <input
+            type="number"
+            {...register('daily_rate', {
+              required: 'Precio por día requerido',
+              min: { value: 1, message: 'Debe ser mayor a 0' },
+            })}
+            className={inputCls}
+            placeholder="50000"
+          />
+        </Field>
+        <Field
+          label="Precio por semana (opcional)"
+          error={errors.weekly_rate?.message}
+        >
+          <input
+            type="number"
+            {...register('weekly_rate', {
+              min: { value: 0, message: 'Inválido' },
+            })}
+            className={inputCls}
+            placeholder="300000"
+          />
+        </Field>
+        <Field
+          label="Precio por mes (opcional)"
+          error={errors.monthly_rate?.message}
+        >
+          <input
+            type="number"
+            {...register('monthly_rate', {
+              min: { value: 0, message: 'Inválido' },
+            })}
+            className={inputCls}
+            placeholder="1100000"
+          />
+        </Field>
+        <Field
+          label="Depósito específico (opcional)"
+          hint="Si difiere del general"
+          error={errors.specific_deposit?.message}
+        >
+          <input
+            type="number"
+            {...register('specific_deposit', {
+              min: { value: 0, message: 'Inválido' },
+            })}
+            className={inputCls}
+            placeholder="100000"
+          />
+        </Field>
+      </FormSection>
+
+      {/* ---------- Vencimientos legales ---------- */}
+      <FormSection title="Vencimientos">
+        <Field
+          label="Fecha vencimiento SOAT"
+          hint="Se crearán alertas a 30, 15, 7 y 1 día antes"
+          error={errors.soat_expiry?.message}
+        >
+          <input
+            type="date"
+            min={todayISO()}
+            {...register('soat_expiry', {
+              required: 'Fecha SOAT requerida',
+            })}
+            className={inputCls}
+          />
+        </Field>
+        <Field
+          label="Fecha vencimiento RTM"
+          hint="Revisión Técnico-Mecánica"
+          error={errors.rtm_expiry?.message}
+        >
+          <input
+            type="date"
+            min={todayISO()}
+            {...register('rtm_expiry', {
+              required: 'Fecha RTM requerida',
+            })}
+            className={inputCls}
+          />
+        </Field>
+      </FormSection>
+
+      {/* ---------- Opcionales ---------- */}
+      <FormSection title="Información adicional (opcional)">
+        <Field label="Requisitos específicos" full>
+          <textarea
+            {...register('requirements_specific')}
+            className={`${inputCls} min-h-[60px]`}
+            placeholder="Ej: solo conductores con +2 años de licencia"
+          />
+        </Field>
+        <Field label="Restricciones de zona" full>
+          <textarea
+            {...register('zone_restrictions')}
+            className={`${inputCls} min-h-[60px]`}
+            placeholder="Ej: no apto para carreteras sin pavimentar"
+          />
+        </Field>
+        <Field label="Observaciones" full>
+          <textarea
+            {...register('notes')}
+            className={`${inputCls} min-h-[60px]`}
+            placeholder="Notas internas sobre el vehículo"
+          />
+        </Field>
+      </FormSection>
 
       {err && (
-        <div className="col-span-2 rounded-md border-l-[3px] border-l-brand border-y border-r border-gray-200 bg-white px-3 py-2 text-xs text-gray-700">
+        <div className="rounded-md border-l-[3px] border-l-brand border-y border-r border-gray-200 bg-white px-3 py-2 text-xs text-gray-700">
           {err}
         </div>
       )}
 
-      <div className="col-span-2 flex items-center justify-end gap-2">
+      <div className="flex items-center justify-end gap-2 border-t border-gray-200 pt-4">
         <button
           type="button"
           onClick={onCancel}
@@ -1028,12 +1514,29 @@ function InlineVehicleForm({
         <button
           type="submit"
           disabled={saving}
-          className="rounded-md bg-brand px-4 py-2 text-sm font-bold text-white hover:bg-[#C8152A] disabled:opacity-60"
+          className="rounded-md bg-brand px-5 py-2 text-sm font-bold text-white hover:bg-[#C8152A] disabled:opacity-60"
         >
           {saving ? 'Guardando…' : 'Agregar vehículo'}
         </button>
       </div>
     </form>
+  )
+}
+
+function FormSection({
+  title,
+  children,
+}: {
+  title: string
+  children: React.ReactNode
+}) {
+  return (
+    <div>
+      <div className="mb-2 text-[10px] font-bold uppercase tracking-[0.18em] text-gray-500">
+        {title}
+      </div>
+      <div className="grid grid-cols-2 gap-3">{children}</div>
+    </div>
   )
 }
 
@@ -1088,15 +1591,64 @@ function Summary({
         </Block>
 
         <Block title="Políticas">
-          <Row k="Requisitos" v={p.requirements?.join(' · ') ?? '—'} />
+          <Row k="Requisitos" v={(p as Record<string, unknown>).requirements as string} />
           <Row
-            k="Depósito"
-            v={p.deposit_amount ? COP.format(p.deposit_amount) : '—'}
+            k="Documentos"
+            v={
+              ((p as Record<string, unknown>).documents as string[] | undefined)
+                ?.map((d) =>
+                  d === 'cedula'
+                    ? 'Cédula'
+                    : d === 'licencia'
+                      ? 'Licencia'
+                      : d === 'foto_cliente'
+                        ? 'Foto'
+                        : d === 'referencias'
+                          ? 'Referencias'
+                          : d === 'otro'
+                            ? ((p as Record<string, unknown>).documents_other as string) || 'Otro'
+                            : d
+                )
+                .join(' · ')
+            }
           />
-          <Row k="Zonas" v={p.zones} />
-          <Row k="Combustible" v={p.fuel_policy} />
-          <Row k="Kilometraje" v={p.mileage_policy} />
-          <Row k="Cancelación" v={p.cancellation_policy} />
+          <Row k="Depósito" v={(p as Record<string, unknown>).deposit_policy as string} />
+          <Row
+            k="Combustible"
+            v={
+              [
+                summaryFuelLabel((p as Record<string, unknown>).fuel_policy_type as string),
+                ((p as Record<string, unknown>).fuel_policy_note as string) || '',
+              ]
+                .filter(Boolean)
+                .join(' — ')
+            }
+          />
+          <Row
+            k="Kilometraje"
+            v={
+              (p as Record<string, unknown>).mileage_policy_type === 'limitado'
+                ? `Limitado a ${(p as Record<string, unknown>).mileage_limit as number} km/día`
+                : 'Sin límite'
+            }
+          />
+          <Row
+            k="Zonas"
+            v={
+              [
+                summaryZoneLabel((p as Record<string, unknown>).zones_type as string),
+                ((p as Record<string, unknown>).zones_exceptions as string) || '',
+              ]
+                .filter(Boolean)
+                .join(' — ')
+            }
+          />
+          <Row k="Cancelación" v={(p as Record<string, unknown>).cancellation_policy as string} />
+          <Row
+            k="Retraso devolución"
+            v={`${COP.format(Number((p as Record<string, unknown>).late_return_hourly) || 0)} / hora · ${COP.format(Number((p as Record<string, unknown>).late_return_daily) || 0)} / día`}
+          />
+          <Row k="Daños y siniestros" v={(p as Record<string, unknown>).damages_policy as string} />
         </Block>
 
         <Block title="Métodos de pago">
@@ -1175,4 +1727,17 @@ function Row({ k, v }: { k: string; v?: string | null }) {
       <dd className="text-right text-gray-800">{v || '—'}</dd>
     </div>
   )
+}
+
+function summaryFuelLabel(t?: string) {
+  if (t === 'lleno') return 'Tanque lleno'
+  if (t === 'vacio') return 'Vacío'
+  if (t === 'medio') return 'Medio tanque'
+  return ''
+}
+function summaryZoneLabel(t?: string) {
+  if (t === 'local') return 'Solo La Dorada'
+  if (t === 'departamental') return 'Departamental (Caldas)'
+  if (t === 'nacional') return 'Nacional'
+  return ''
 }

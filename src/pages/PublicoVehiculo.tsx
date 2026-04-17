@@ -305,28 +305,35 @@ function BookingForm({
       )
     )
     const estimate = days * Number(vehicle.daily_rate ?? 0)
-    const fmt = (iso: string) => new Date(iso).toLocaleDateString('es-CO')
-    const lines = [
+    // Formatea fechas sin pasar por Date() para evitar corrimiento por timezone
+    const fmt = (iso: string) => {
+      const [y, m, d] = iso.split('-')
+      return `${d}/${m}/${y}`
+    }
+    const blocks: string[] = [
       '*Solicitud de reserva — Alquileres La 14*',
-      '',
-      `*Vehículo:* ${vehicle.brand} ${vehicle.model}`,
-      `*Placa:* ${vehicle.plate}`,
-      `*Tarifa:* ${COP.format(Number(vehicle.daily_rate ?? 0))}/día`,
-      '',
-      `*Cliente:* ${values.full_name}`,
-      `*Cédula:* ${values.document_number}`,
-      `*Teléfono:* ${values.phone}`,
-      values.email ? `*Correo:* ${values.email}` : '',
-      '',
-      `*Fechas:* ${fmt(values.start_date)} al ${fmt(values.end_date)}`,
-      `*Duración:* ${days} día${days === 1 ? '' : 's'}`,
-      `*Valor estimado:* ${COP.format(estimate)}`,
-      values.notes ? '' : '',
+      [
+        `*Vehículo:* ${vehicle.brand} ${vehicle.model}`,
+        `*Placa:* ${vehicle.plate}`,
+        `*Tarifa:* ${COP.format(Number(vehicle.daily_rate ?? 0))}/día`,
+      ].join('\n'),
+      [
+        `*Cliente:* ${values.full_name}`,
+        `*Cédula:* ${values.document_number}`,
+        `*Teléfono:* ${values.phone}`,
+        values.email ? `*Correo:* ${values.email}` : '',
+      ]
+        .filter(Boolean)
+        .join('\n'),
+      [
+        `*Fechas:* ${fmt(values.start_date)} al ${fmt(values.end_date)}`,
+        `*Duración:* ${days} día${days === 1 ? '' : 's'}`,
+        `*Valor estimado:* ${COP.format(estimate)}`,
+      ].join('\n'),
       values.notes ? `*Observaciones:* ${values.notes}` : '',
-      '',
       'La solicitud quedó registrada en el sistema. Quedo atento para confirmar disponibilidad y método de pago.',
-    ]
-    const msg = lines.filter((l) => l !== undefined).join('\n')
+    ].filter(Boolean)
+    const msg = blocks.join('\n\n')
     const url = `https://wa.me/${BUSINESS_INFO.whatsapp}?text=${encodeURIComponent(msg)}`
 
     // Informa al padre (muestra pantalla de éxito con fallback)

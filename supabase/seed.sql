@@ -7,14 +7,31 @@
 -- ---------------------------------------------------------------------
 -- 1. VEHÍCULOS (flota de David)
 -- ---------------------------------------------------------------------
+-- Las fotos son URLs públicas de Unsplash (dominio CC0).
+-- Si alguna URL queda rota, reemplázala por otra de tu agrado o sube
+-- las fotos reales a Supabase Storage y referencia esas URLs.
 insert into public.vehicles
-  (plate, brand, model, year, color, vehicle_type, daily_rate, weekly_rate, monthly_rate, status, mileage_km, notes)
+  (plate, brand, model, year, color, vehicle_type, daily_rate, weekly_rate, monthly_rate, status, mileage_km, notes, photos)
 values
-  ('HKL12A', 'Bajaj',   'Boxer CT 100',     2021, 'Negro',  'moto', 26000,  150000,  550000,  'disponible',    18500, 'Flota David — económica, bajo consumo'),
-  ('JPR45B', 'AKT',     'NKD 125',          2022, 'Rojo',   'moto', 35000,  210000,  780000,  'alquilado',     12300, 'Flota David'),
-  ('KMN78C', 'Yamaha',  'FZ 2.0',           2023, 'Azul',   'moto', 55000,  330000, 1200000,  'disponible',     6400, 'Flota David — mantenimiento al día'),
-  ('LRT91D', 'Honda',   'CB 160F',          2023, 'Blanco', 'moto', 75000,  450000, 1650000,  'alquilado',      4100, 'Flota David — premium'),
-  ('MSV34E', 'Suzuki',  'V-Strom 250',      2024, 'Gris',   'moto', 150000, 900000, 3300000,  'mantenimiento',  9800, 'Flota David — trail, uso intensivo')
+  ('HKL12A', 'Bajaj',   'Boxer CT 100',     2021, 'Negro',  'moto', 26000,  150000,  550000,  'disponible',    18500,
+     'Flota David — económica, bajo consumo',
+     array['https://images.unsplash.com/photo-1558981403-c5f9899a28bc?auto=format&fit=crop&w=1200&q=80']),
+
+  ('JPR45B', 'AKT',     'NKD 125',          2022, 'Rojo',   'moto', 35000,  210000,  780000,  'alquilado',     12300,
+     'Flota David',
+     array['https://images.unsplash.com/photo-1547549082-6bc09f2049ae?auto=format&fit=crop&w=1200&q=80']),
+
+  ('KMN78C', 'Yamaha',  'FZ 2.0',           2023, 'Azul',   'moto', 55000,  330000, 1200000,  'disponible',     6400,
+     'Flota David — mantenimiento al día',
+     array['https://images.unsplash.com/photo-1568772585407-9361f9bf3a87?auto=format&fit=crop&w=1200&q=80']),
+
+  ('LRT91D', 'Honda',   'CB 160F',          2023, 'Blanco', 'moto', 75000,  450000, 1650000,  'alquilado',      4100,
+     'Flota David — premium',
+     array['https://images.unsplash.com/photo-1558981806-ec527fa84c39?auto=format&fit=crop&w=1200&q=80']),
+
+  ('MSV34E', 'Suzuki',  'V-Strom 250',      2024, 'Gris',   'moto', 150000, 900000, 3300000,  'mantenimiento',  9800,
+     'Flota David — trail, uso intensivo',
+     array['https://images.unsplash.com/photo-1591637333184-19aa84b3e01f?auto=format&fit=crop&w=1200&q=80'])
 on conflict (plate) do nothing;
 
 -- ---------------------------------------------------------------------

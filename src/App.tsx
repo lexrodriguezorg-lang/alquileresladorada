@@ -5,6 +5,7 @@ import Layout from './components/Layout'
 import Dashboard from './pages/Dashboard'
 import Vehiculos from './pages/Vehiculos'
 import VehiculoDetalle from './pages/VehiculoDetalle'
+import VehiculosImportar from './pages/VehiculosImportar'
 import Clientes from './pages/Clientes'
 import Contratos from './pages/Contratos'
 import Recibos from './pages/Recibos'
@@ -49,6 +50,7 @@ function App() {
             <Route index element={<Dashboard />} />
             <Route path="solicitudes" element={<Solicitudes />} />
             <Route path="vehiculos" element={<Vehiculos />} />
+            <Route path="vehiculos/importar" element={<VehiculosImportar />} />
             <Route path="vehiculos/:id" element={<VehiculoDetalle />} />
             <Route path="clientes" element={<Clientes />} />
             <Route path="contratos" element={<Contratos />} />

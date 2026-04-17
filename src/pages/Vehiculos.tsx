@@ -64,12 +64,20 @@ export default function Vehiculos() {
         title="Vehículos"
         subtitle="Gestión de la flota"
         actions={
-          <button
-            onClick={() => setModalOpen(true)}
-            className="rounded-lg bg-brand px-4 py-2 text-sm font-semibold text-white hover:bg-[#C8152A]"
-          >
-            + Nuevo vehículo
-          </button>
+          <div className="flex gap-2">
+            <button
+              onClick={() => navigate('/vehiculos/importar')}
+              className="rounded-lg border border-gray-200 bg-white px-4 py-2 text-sm font-semibold text-gray-800 hover:border-brand hover:text-brand"
+            >
+              📥 Importar CSV
+            </button>
+            <button
+              onClick={() => setModalOpen(true)}
+              className="rounded-lg bg-brand px-4 py-2 text-sm font-semibold text-white hover:bg-[#C8152A]"
+            >
+              + Nuevo vehículo
+            </button>
+          </div>
         }
       />
 

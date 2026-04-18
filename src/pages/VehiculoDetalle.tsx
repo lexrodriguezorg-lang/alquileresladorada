@@ -114,28 +114,37 @@ export default function VehiculoDetalle() {
 
         {/* ---------- Sidebar: datos del vehículo ---------- */}
         <aside className="lg:w-80">
-          <div className="sticky top-4 rounded-xl border border-gray-200 bg-white p-5">
-            <div className="text-[11px] font-bold uppercase tracking-[0.18em] text-gray-500">
-              Resumen
-            </div>
-            <div className="mt-3 space-y-2 text-sm">
-              <Row k="Marca" v={vehicle.brand} />
-              <Row k="Modelo" v={vehicle.model} />
-              <Row k="Año" v={vehicle.year ? String(vehicle.year) : '—'} />
-              <Row k="Cilindraje" v={vehicle.engine_cc ? `${vehicle.engine_cc} cc` : '—'} />
-              <Row k="Color" v={vehicle.color ?? '—'} />
-              <Row k="Kilometraje" v={vehicle.mileage_km != null ? `${vehicle.mileage_km.toLocaleString('es-CO')} km` : '—'} />
-              <Row k="Estado" v={vehicle.status} />
-            </div>
-            <div className="mt-4 rounded-lg border border-gray-200 bg-[#F9FAFB] p-3">
-              <div className="text-[10px] font-bold uppercase tracking-widest text-gray-500">
-                Tarifa diaria
+          <div className="sticky top-4 space-y-4">
+            {/* Estado del vehículo (acción) */}
+            <StatusManager
+              vehicle={vehicle}
+              onChange={load}
+              onError={setError}
+            />
+
+            {/* Resumen de datos */}
+            <div className="rounded-xl border border-gray-200 bg-white p-5">
+              <div className="text-[11px] font-bold uppercase tracking-[0.18em] text-gray-500">
+                Resumen
               </div>
-              <div
-                className="text-2xl font-black text-brand"
-                style={{ fontFamily: 'var(--font-brand)' }}
-              >
-                {COP.format(Number(vehicle.daily_rate))}
+              <div className="mt-3 space-y-2 text-sm">
+                <Row k="Marca" v={vehicle.brand} />
+                <Row k="Modelo" v={vehicle.model} />
+                <Row k="Año" v={vehicle.year ? String(vehicle.year) : '—'} />
+                <Row k="Cilindraje" v={vehicle.engine_cc ? `${vehicle.engine_cc} cc` : '—'} />
+                <Row k="Color" v={vehicle.color ?? '—'} />
+                <Row k="Kilometraje" v={vehicle.mileage_km != null ? `${vehicle.mileage_km.toLocaleString('es-CO')} km` : '—'} />
+              </div>
+              <div className="mt-4 rounded-lg border border-gray-200 bg-[#F9FAFB] p-3">
+                <div className="text-[10px] font-bold uppercase tracking-widest text-gray-500">
+                  Tarifa diaria
+                </div>
+                <div
+                  className="text-2xl font-black text-brand"
+                  style={{ fontFamily: 'var(--font-brand)' }}
+                >
+                  {COP.format(Number(vehicle.daily_rate))}
+                </div>
               </div>
             </div>
           </div>
@@ -276,6 +285,139 @@ function PhotoSlotCard({
         >
           {uploading ? 'Subiendo…' : current ? 'Cambiar foto' : 'Subir foto'}
         </button>
+      </div>
+    </div>
+  )
+}
+
+// ------------------------------------------------------------------
+// Status Manager — cambia el estado del vehículo con un click
+// ------------------------------------------------------------------
+const STATUS_OPTIONS: Array<{
+  value: 'disponible' | 'alquilado' | 'mantenimiento' | 'inactivo'
+  label: string
+  desc: string
+  classes: { active: string; idle: string; dot: string }
+}> = [
+  {
+    value: 'disponible',
+    label: 'Disponible',
+    desc: 'Visible en catálogo público',
+    classes: {
+      active:
+        'border-emerald-500 bg-emerald-50 text-emerald-800 ring-2 ring-emerald-500/20',
+      idle: 'border-gray-200 bg-white text-gray-700 hover:border-emerald-300',
+      dot: 'bg-emerald-500',
+    },
+  },
+  {
+    value: 'alquilado',
+    label: 'Alquilado',
+    desc: 'En uso por un cliente',
+    classes: {
+      active:
+        'border-amber-500 bg-amber-50 text-amber-800 ring-2 ring-amber-500/20',
+      idle: 'border-gray-200 bg-white text-gray-700 hover:border-amber-300',
+      dot: 'bg-amber-500',
+    },
+  },
+  {
+    value: 'mantenimiento',
+    label: 'Mantenimiento',
+    desc: 'Fuera temporalmente',
+    classes: {
+      active: 'border-sky-500 bg-sky-50 text-sky-800 ring-2 ring-sky-500/20',
+      idle: 'border-gray-200 bg-white text-gray-700 hover:border-sky-300',
+      dot: 'bg-sky-500',
+    },
+  },
+  {
+    value: 'inactivo',
+    label: 'Inactivo',
+    desc: 'Retirado de la flota',
+    classes: {
+      active:
+        'border-gray-400 bg-gray-100 text-gray-800 ring-2 ring-gray-400/20',
+      idle: 'border-gray-200 bg-white text-gray-700 hover:border-gray-400',
+      dot: 'bg-gray-500',
+    },
+  },
+]
+
+function StatusManager({
+  vehicle,
+  onChange,
+  onError,
+}: {
+  vehicle: Vehicle
+  onChange: () => void
+  onError: (msg: string) => void
+}) {
+  const [updating, setUpdating] = useState<string | null>(null)
+  const [savedAt, setSavedAt] = useState<number | null>(null)
+
+  async function setStatus(next: (typeof STATUS_OPTIONS)[number]['value']) {
+    if (next === vehicle.status) return
+    setUpdating(next)
+    try {
+      const { error } = await supabase
+        .from('vehicles')
+        .update({ status: next })
+        .eq('id', vehicle.id)
+      if (error) throw error
+      setSavedAt(Date.now())
+      onChange()
+    } catch (e: unknown) {
+      onError(e instanceof Error ? e.message : 'No se pudo cambiar el estado')
+    } finally {
+      setUpdating(null)
+    }
+  }
+
+  const showSaved = savedAt && Date.now() - savedAt < 2500
+
+  return (
+    <div className="rounded-xl border border-gray-200 bg-white p-5">
+      <div className="flex items-center justify-between">
+        <div className="text-[11px] font-bold uppercase tracking-[0.18em] text-gray-500">
+          Estado
+        </div>
+        {showSaved && (
+          <span className="text-[10px] font-semibold uppercase tracking-wider text-emerald-600">
+            ✓ Guardado
+          </span>
+        )}
+      </div>
+      <p className="mt-1 text-xs text-gray-500">
+        Click para cambiar. Solo los <span className="font-semibold text-gray-700">disponibles</span> aparecen en el catálogo público.
+      </p>
+
+      <div className="mt-3 grid grid-cols-2 gap-2">
+        {STATUS_OPTIONS.map((opt) => {
+          const active = vehicle.status === opt.value
+          const isUpdating = updating === opt.value
+          return (
+            <button
+              key={opt.value}
+              type="button"
+              onClick={() => setStatus(opt.value)}
+              disabled={isUpdating || updating !== null}
+              className={`flex flex-col items-start gap-1 rounded-lg border px-3 py-2.5 text-left transition disabled:opacity-60 ${
+                active ? opt.classes.active : opt.classes.idle
+              }`}
+            >
+              <div className="flex w-full items-center gap-2">
+                <span className={`h-2 w-2 rounded-full ${opt.classes.dot}`} />
+                <span className="text-sm font-bold">
+                  {isUpdating ? 'Guardando…' : opt.label}
+                </span>
+              </div>
+              <span className="text-[11px] text-gray-500 leading-tight">
+                {opt.desc}
+              </span>
+            </button>
+          )
+        })}
       </div>
     </div>
   )

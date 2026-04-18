@@ -3,6 +3,7 @@ import { Link, useNavigate, useParams } from 'react-router-dom'
 import { supabase } from '../lib/supabase'
 import type { Vehicle } from '../lib/database.types'
 import PageHeader from '../components/PageHeader'
+import { syncVehicleExpiryAlerts } from '../lib/alerts'
 import {
   SLOT_LABEL,
   VEHICLE_PHOTO_SLOTS,
@@ -83,6 +84,8 @@ export default function VehiculoDetalle() {
           {error}
         </div>
       )}
+
+      <PendingDataBanner vehicle={vehicle} onUpdated={load} onError={setError} />
 
       <div className="grid grid-cols-1 gap-6 p-6 lg:grid-cols-[1fr_auto]">
         {/* ---------- Columna izquierda: fotos ---------- */}
@@ -428,6 +431,178 @@ function Row({ k, v }: { k: string; v: string }) {
     <div className="flex items-baseline justify-between gap-3 text-sm">
       <dt className="text-xs font-semibold uppercase tracking-wider text-gray-500">{k}</dt>
       <dd className="text-right font-medium text-gray-900">{v}</dd>
+    </div>
+  )
+}
+
+// ------------------------------------------------------------------
+// Banner de datos pendientes (SOAT, RTM, etc.)
+// ------------------------------------------------------------------
+function PendingDataBanner({
+  vehicle,
+  onUpdated,
+  onError,
+}: {
+  vehicle: Vehicle
+  onUpdated: () => void
+  onError: (msg: string) => void
+}) {
+  const [editing, setEditing] = useState(false)
+  const missing: string[] = []
+  if (!vehicle.soat_expiry) missing.push('SOAT')
+  if (!vehicle.rtm_expiry) missing.push('RTM')
+
+  if (missing.length === 0) return null
+
+  return (
+    <>
+      <div className="mx-6 mt-4 flex flex-col gap-3 rounded-md border-l-[3px] border-l-amber-400 border-y border-r border-gray-200 bg-amber-50/50 px-4 py-3 sm:flex-row sm:items-center sm:justify-between">
+        <div className="flex items-start gap-3">
+          <span className="flex h-6 w-6 shrink-0 items-center justify-center rounded-full bg-amber-400 text-xs font-bold text-white">
+            !
+          </span>
+          <div>
+            <div className="text-sm font-bold text-gray-900">
+              Faltan datos por completar
+            </div>
+            <div className="text-xs text-gray-600">
+              Vencimiento de: {missing.join(' · ')}. Sin estas fechas no se
+              generan alertas de renovación.
+            </div>
+          </div>
+        </div>
+        <button
+          onClick={() => setEditing(true)}
+          className="shrink-0 rounded-md bg-amber-500 px-4 py-2 text-xs font-bold uppercase tracking-wider text-white hover:bg-amber-600"
+        >
+          Completar fechas
+        </button>
+      </div>
+
+      {editing && (
+        <ExpiryDatesModal
+          vehicle={vehicle}
+          onClose={() => setEditing(false)}
+          onSaved={async () => {
+            setEditing(false)
+            onUpdated()
+          }}
+          onError={onError}
+        />
+      )}
+    </>
+  )
+}
+
+function ExpiryDatesModal({
+  vehicle,
+  onClose,
+  onSaved,
+  onError,
+}: {
+  vehicle: Vehicle
+  onClose: () => void
+  onSaved: () => void
+  onError: (msg: string) => void
+}) {
+  const [soat, setSoat] = useState(vehicle.soat_expiry ?? '')
+  const [rtm, setRtm] = useState(vehicle.rtm_expiry ?? '')
+  const [saving, setSaving] = useState(false)
+
+  async function handleSave(e: React.FormEvent) {
+    e.preventDefault()
+    if (!soat && !rtm) {
+      onError('Ingresa al menos una fecha')
+      return
+    }
+    setSaving(true)
+    try {
+      const patch: Record<string, string | null> = {}
+      if (soat) patch.soat_expiry = soat
+      if (rtm) patch.rtm_expiry = rtm
+      const { error } = await supabase
+        .from('vehicles')
+        .update(patch)
+        .eq('id', vehicle.id)
+      if (error) throw error
+
+      // Regenerar alertas SOAT/RTM con las nuevas fechas
+      await syncVehicleExpiryAlerts({
+        id: vehicle.id,
+        plate: vehicle.plate,
+        soat_expiry: soat || vehicle.soat_expiry,
+        rtm_expiry: rtm || vehicle.rtm_expiry,
+      })
+
+      onSaved()
+    } catch (e: unknown) {
+      onError(
+        e instanceof Error ? e.message : 'No se pudieron guardar las fechas'
+      )
+    } finally {
+      setSaving(false)
+    }
+  }
+
+  return (
+    <div className="fixed inset-0 z-50 flex items-center justify-center bg-gray-900/50 p-4">
+      <form
+        onSubmit={handleSave}
+        className="w-full max-w-md rounded-xl border border-gray-200 bg-white p-6 shadow-xl"
+      >
+        <div className="mb-1 text-[11px] font-bold uppercase tracking-[0.18em] text-brand">
+          Vehículo {vehicle.plate}
+        </div>
+        <h3 className="text-lg font-bold text-gray-900">
+          Completar fechas de documentos
+        </h3>
+        <p className="mt-1 text-sm text-gray-600">
+          Al guardar, se generan automáticamente las alertas de vencimiento a
+          30, 15, 7 y 1 día antes.
+        </p>
+
+        <div className="mt-4 space-y-3">
+          <div>
+            <label className="mb-1 block text-[11px] font-semibold uppercase tracking-wider text-gray-500">
+              Vencimiento SOAT
+            </label>
+            <input
+              type="date"
+              value={soat}
+              onChange={(e) => setSoat(e.target.value)}
+              className="w-full rounded-md border border-gray-200 bg-white px-3 py-2 text-sm focus:border-brand focus:outline-none focus:ring-2 focus:ring-brand/20"
+            />
+          </div>
+          <div>
+            <label className="mb-1 block text-[11px] font-semibold uppercase tracking-wider text-gray-500">
+              Vencimiento RTM
+            </label>
+            <input
+              type="date"
+              value={rtm}
+              onChange={(e) => setRtm(e.target.value)}
+              className="w-full rounded-md border border-gray-200 bg-white px-3 py-2 text-sm focus:border-brand focus:outline-none focus:ring-2 focus:ring-brand/20"
+            />
+          </div>
+        </div>
+
+        <div className="mt-5 flex justify-end gap-2">
+          <button
+            type="button"
+            onClick={onClose}
+            className="rounded-md border border-gray-200 bg-white px-4 py-2 text-sm font-medium text-gray-700 hover:border-gray-300"
+          >
+            Cancelar
+          </button>
+          <button
+            type="submit"
+            disabled={saving}
+            className="rounded-md bg-brand px-5 py-2 text-sm font-bold text-white hover:bg-[#C8152A] disabled:opacity-60"
+          >
+            {saving ? 'Guardando…' : 'Guardar fechas'}
+          </button>
+        </div>
+      </form>
     </div>
   )
 }

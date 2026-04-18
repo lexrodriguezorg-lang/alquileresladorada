@@ -30,10 +30,10 @@ const COLUMNS = [
   'status',
 ] as const
 
-// Placa colombiana:
-//  - Carros: 3 letras + 3 dígitos (ABC-123 o ABC123)
-//  - Motos:  3 letras + 2 dígitos + 1 letra (ABC-12D o ABC12D)
-const PLATE_RE = /^[A-Z]{3}-?(\d{3}|\d{2}[A-Z])$/
+// Placa permisiva: 2-3 letras + 2-4 dígitos + letra opcional al final
+// Cubre formatos modernos (ABC-123, ABC-12D) y placas antiguas (BHB-43,
+// AB-1234, etc.) tal como aparecen en documentos legales.
+const PLATE_RE = /^[A-Z]{2,3}-?\d{2,4}[A-Z]?$/
 const DATE_RE = /^\d{4}-\d{2}-\d{2}$/
 const TYPES = ['moto', 'carro', 'camioneta', 'otro'] as const
 const STATUSES = ['disponible', 'alquilado', 'mantenimiento', 'inactivo'] as const
@@ -56,8 +56,8 @@ interface CleanVehicle {
   weekly_rate: number | null
   monthly_rate: number | null
   specific_deposit: number | null
-  soat_expiry: string
-  rtm_expiry: string
+  soat_expiry: string | null
+  rtm_expiry: string | null
   requirements_specific: string | null
   zone_restrictions: string | null
   notes: string | null
@@ -187,14 +187,15 @@ function validateRow(
   if (daily_rate == null || daily_rate <= 0)
     errors.push('Precio por día requerido (> 0)')
 
+  // SOAT/RTM son OPCIONALES en la importación. Si vienen, deben tener
+  // formato válido. Si no, el vehículo se crea sin ellas y aparece
+  // un banner de "datos pendientes" en el detalle del admin.
   const soat_expiry = (raw.soat_expiry ?? '').toString().trim()
-  if (!soat_expiry) errors.push('Fecha SOAT requerida')
-  else if (!DATE_RE.test(soat_expiry))
+  if (soat_expiry && !DATE_RE.test(soat_expiry))
     errors.push('SOAT con formato inválido (YYYY-MM-DD)')
 
   const rtm_expiry = (raw.rtm_expiry ?? '').toString().trim()
-  if (!rtm_expiry) errors.push('Fecha RTM requerida')
-  else if (!DATE_RE.test(rtm_expiry))
+  if (rtm_expiry && !DATE_RE.test(rtm_expiry))
     errors.push('RTM con formato inválido (YYYY-MM-DD)')
 
   const statusRaw = (raw.status ?? 'disponible').toString().trim().toLowerCase()
@@ -220,8 +221,8 @@ function validateRow(
     weekly_rate: num(raw.weekly_rate),
     monthly_rate: num(raw.monthly_rate),
     specific_deposit: num(raw.specific_deposit),
-    soat_expiry,
-    rtm_expiry,
+    soat_expiry: soat_expiry || null,
+    rtm_expiry: rtm_expiry || null,
     requirements_specific: strOrNull(raw.requirements_specific),
     zone_restrictions: strOrNull(raw.zone_restrictions),
     notes: strOrNull(raw.notes),

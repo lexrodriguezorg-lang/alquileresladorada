@@ -1044,10 +1044,9 @@ type VehicleFormValues = {
   notes: string
 }
 
-// Placa colombiana:
-//  - Carros: 3 letras + 3 dígitos (ABC-123 o ABC123)
-//  - Motos:  3 letras + 2 dígitos + 1 letra (ABC-12D o ABC12D)
-const PLATE_REGEX = /^[A-Z]{3}-?(\d{3}|\d{2}[A-Z])$/
+// Placa permisiva: 2-3 letras + 2-4 dígitos + letra opcional al final
+// Cubre formatos modernos (ABC-123, ABC-12D) y placas antiguas (BHB-43, etc.)
+const PLATE_REGEX = /^[A-Z]{2,3}-?\d{2,4}[A-Z]?$/
 const todayISO = () => new Date().toISOString().split('T')[0]
 
 function Step4Fleet({

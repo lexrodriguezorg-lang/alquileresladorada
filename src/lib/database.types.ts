@@ -67,8 +67,16 @@ export interface Vehicle {
   status: VehicleStatus
   mileage_km: number | null
   engine_cc: number | null
+  engine_liters: number | null
   photos: string[] | null
   notes: string | null
+  // Vencimientos legales (migration 0004)
+  soat_expiry: string | null
+  rtm_expiry: string | null
+  // Configuración específica (migration 0004)
+  specific_deposit: number | null
+  requirements_specific: string | null
+  zone_restrictions: string | null
   created_at: string
   updated_at: string
 }

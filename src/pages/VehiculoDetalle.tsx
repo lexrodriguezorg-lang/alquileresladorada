@@ -86,10 +86,11 @@ export default function VehiculoDetalle() {
       )}
 
       <PendingDataBanner vehicle={vehicle} onUpdated={load} onError={setError} />
+      <PendingPhotoBanner vehicle={vehicle} />
 
       <div className="grid grid-cols-1 gap-6 p-6 lg:grid-cols-[1fr_auto]">
         {/* ---------- Columna izquierda: fotos ---------- */}
-        <section>
+        <section id="fotos">
           <div className="mb-4 flex items-baseline justify-between">
             <div>
               <div className="text-[11px] font-bold uppercase tracking-[0.18em] text-gray-500">
@@ -431,6 +432,40 @@ function Row({ k, v }: { k: string; v: string }) {
     <div className="flex items-baseline justify-between gap-3 text-sm">
       <dt className="text-xs font-semibold uppercase tracking-wider text-gray-500">{k}</dt>
       <dd className="text-right font-medium text-gray-900">{v}</dd>
+    </div>
+  )
+}
+
+// ------------------------------------------------------------------
+// Banner: este vehículo no tiene foto principal todavía
+// ------------------------------------------------------------------
+function PendingPhotoBanner({ vehicle }: { vehicle: Vehicle }) {
+  const hasAnyPhoto = !!(
+    vehicle.photos && vehicle.photos.find((p) => p && p.trim() !== '')
+  )
+  if (hasAnyPhoto) return null
+  return (
+    <div className="mx-6 mt-3 flex flex-col gap-3 rounded-md border-l-[3px] border-l-amber-400 border-y border-r border-gray-200 bg-amber-50/50 px-4 py-3 sm:flex-row sm:items-center sm:justify-between">
+      <div className="flex items-start gap-3">
+        <span className="flex h-6 w-6 shrink-0 items-center justify-center rounded-full bg-amber-400 text-sm">
+          📷
+        </span>
+        <div>
+          <div className="text-sm font-bold text-gray-900">
+            Aún no tiene foto principal
+          </div>
+          <div className="text-xs text-gray-600">
+            En el catálogo público se muestra un placeholder hasta que subas la
+            foto del frente.
+          </div>
+        </div>
+      </div>
+      <a
+        href="#fotos"
+        className="shrink-0 rounded-md bg-amber-500 px-4 py-2 text-xs font-bold uppercase tracking-wider text-white hover:bg-amber-600"
+      >
+        Subir foto ahora
+      </a>
     </div>
   )
 }

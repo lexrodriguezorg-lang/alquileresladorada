@@ -56,6 +56,7 @@ export default function Dashboard() {
     maintenance: 0,
     inactive: 0,
   })
+  const [photoStats, setPhotoStats] = useState({ withPhoto: 0, total: 0 })
   const [contracts, setContracts] = useState<ContractWithRelations[]>([])
   const [alerts, setAlerts] = useState<Alert[]>([])
   const [loading, setLoading] = useState(true)
@@ -91,7 +92,7 @@ export default function Dashboard() {
       try {
         const vehiclesReq = supabase
           .from('vehicles')
-          .select('status', { count: 'exact' })
+          .select('status, photos', { count: 'exact' })
 
         const contractsReq = supabase
           .from('contracts')
@@ -133,6 +134,11 @@ export default function Dashboard() {
           maintenance: rows.filter((v) => v.status === 'mantenimiento').length,
           inactive: rows.filter((v) => v.status === 'inactivo').length,
         })
+        const withPhoto = rows.filter(
+          (v: { photos?: string[] | null }) =>
+            !!(v.photos && v.photos.find((p) => p && p.trim() !== ''))
+        ).length
+        setPhotoStats({ withPhoto, total: vehiclesRes.count ?? rows.length })
         setContracts(
           (contractsRes.data ?? []) as unknown as ContractWithRelations[]
         )
@@ -223,6 +229,41 @@ export default function Dashboard() {
             <StatCard label="Inactivos" value={stats.inactive} loading={loading} />
           </div>
         </section>
+
+        {/* ------------------ FOTOS PENDIENTES (banner) ------------------ */}
+        {photoStats.total > 0 &&
+          photoStats.withPhoto < photoStats.total && (
+            <Link
+              to="/vehiculos?filter=sin_foto"
+              className="block rounded-xl border border-amber-200 bg-amber-50/40 p-5 transition hover:-translate-y-0.5 hover:shadow-lg"
+            >
+              <div className="flex flex-wrap items-center justify-between gap-4">
+                <div className="flex items-center gap-4">
+                  <span className="flex h-12 w-12 items-center justify-center rounded-full bg-amber-400 text-2xl">
+                    📷
+                  </span>
+                  <div>
+                    <div className="text-[10px] font-bold uppercase tracking-[0.18em] text-amber-700">
+                      Fotos por completar
+                    </div>
+                    <h3 className="mt-1 text-lg font-bold text-gray-900">
+                      {photoStats.withPhoto} / {photoStats.total} motos con foto
+                    </h3>
+                    <p className="mt-0.5 text-sm text-gray-600">
+                      Faltan{' '}
+                      <span className="font-semibold text-amber-700">
+                        {photoStats.total - photoStats.withPhoto}
+                      </span>{' '}
+                      por documentar — sin foto, el catálogo público muestra placeholder.
+                    </p>
+                  </div>
+                </div>
+                <span className="rounded-full bg-amber-500 px-5 py-2.5 text-sm font-bold uppercase tracking-wider text-white">
+                  Ver pendientes →
+                </span>
+              </div>
+            </Link>
+          )}
 
         {/* ------------------ CONTRATOS RECIENTES ------------------ */}
         <section>

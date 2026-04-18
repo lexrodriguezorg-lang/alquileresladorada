@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useMemo, useState } from 'react'
-import { useNavigate } from 'react-router-dom'
+import { useNavigate, useSearchParams } from 'react-router-dom'
 import { supabase } from '../lib/supabase'
 import type { Vehicle, VehicleStatus } from '../lib/database.types'
 import PageHeader from '../components/PageHeader'
@@ -28,6 +28,17 @@ export default function Vehiculos() {
   const [statusFilter, setStatusFilter] = useState<VehicleStatus | 'all'>('all')
   const [modalOpen, setModalOpen] = useState(false)
   const navigate = useNavigate()
+  const [searchParams, setSearchParams] = useSearchParams()
+  const photoFilter = searchParams.get('filter') === 'sin_foto'
+
+  const togglePhotoFilter = () => {
+    if (photoFilter) {
+      searchParams.delete('filter')
+    } else {
+      searchParams.set('filter', 'sin_foto')
+    }
+    setSearchParams(searchParams)
+  }
 
   const load = useCallback(async () => {
     setLoading(true)
@@ -49,6 +60,10 @@ export default function Vehiculos() {
     const q = query.trim().toLowerCase()
     return rows.filter((v) => {
       if (statusFilter !== 'all' && v.status !== statusFilter) return false
+      if (photoFilter) {
+        const hasPhoto = !!(v.photos && v.photos.find((p) => p && p.trim() !== ''))
+        if (hasPhoto) return false
+      }
       if (!q) return true
       return (
         v.plate.toLowerCase().includes(q) ||
@@ -56,7 +71,15 @@ export default function Vehiculos() {
         v.model.toLowerCase().includes(q)
       )
     })
-  }, [rows, query, statusFilter])
+  }, [rows, query, statusFilter, photoFilter])
+
+  const sinFotoCount = useMemo(
+    () =>
+      rows.filter(
+        (v) => !(v.photos && v.photos.find((p) => p && p.trim() !== ''))
+      ).length,
+    [rows]
+  )
 
   return (
     <div>
@@ -116,6 +139,16 @@ export default function Vehiculos() {
             <option value="mantenimiento">Mantenimiento</option>
             <option value="inactivo">Inactivo</option>
           </select>
+          <button
+            onClick={togglePhotoFilter}
+            className={`shrink-0 rounded-lg border px-4 py-2 text-sm font-semibold uppercase tracking-wider transition ${
+              photoFilter
+                ? 'border-amber-500 bg-amber-500 text-white'
+                : 'border-gray-200 bg-white text-gray-700 hover:border-amber-400'
+            }`}
+          >
+            📷 Sin foto {sinFotoCount > 0 && `(${sinFotoCount})`}
+          </button>
         </div>
 
         {error && (
@@ -155,14 +188,21 @@ export default function Vehiculos() {
                     </td>
                   </tr>
                 )}
-                {filtered.map((v) => (
+                {filtered.map((v) => {
+                  const hasPhoto = !!(v.photos && v.photos.find((p) => p && p.trim() !== ''))
+                  return (
                   <tr
                     key={v.id}
                     onClick={() => navigate(`/vehiculos/${v.id}`)}
                     className="cursor-pointer transition hover:bg-gray-50"
                   >
                     <td className="px-4 py-3 font-mono font-semibold text-gray-900">
-                      {v.plate}
+                      <div className="flex items-center gap-2">
+                        {v.plate}
+                        {!hasPhoto && (
+                          <span title="Sin foto" className="text-amber-500">📷✕</span>
+                        )}
+                      </div>
                     </td>
                     <td className="px-4 py-3">
                       <div className="font-medium text-gray-900">
@@ -186,7 +226,8 @@ export default function Vehiculos() {
                       </span>
                     </td>
                   </tr>
-                ))}
+                  )
+                })}
               </tbody>
             </table>
           </div>

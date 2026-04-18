@@ -27,10 +27,12 @@ export default function Publico() {
   useEffect(() => {
     let cancelled = false
     async function load() {
+      // Catálogo público: SOLO vehículos en estado 'disponible'.
+      // Mantenimiento, alquilado e inactivo se ocultan.
       const { data, error } = await supabase
         .from('vehicles')
         .select('*')
-        .neq('status', 'inactivo')
+        .eq('status', 'disponible')
         .order('daily_rate', { ascending: true })
       if (!cancelled) {
         if (error) console.error(error)

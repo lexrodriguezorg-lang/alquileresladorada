@@ -52,10 +52,14 @@ export default function PublicoVehiculo() {
     async function load() {
       if (!id) return
       setLoading(true)
+      // Solo se expone públicamente si está en estado 'disponible'.
+      // Cualquier otro estado (mantenimiento, inactivo, alquilado) no aparece
+      // ni siquiera por link directo.
       const { data, error } = await supabase
         .from('vehicles')
         .select('*')
         .eq('id', id)
+        .eq('status', 'disponible')
         .maybeSingle()
       if (cancelled) return
       if (error || !data) setNotFound(true)
